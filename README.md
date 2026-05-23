@@ -3,6 +3,10 @@
 직접 손으로 조작하며 푸리에 변환을 이해할 수 있는 인터랙티브 학습 사이트입니다.  
 3Blue1Brown의 "But what is the Fourier Transform?" 영상을 기반으로 제작되었습니다.
 
+**🌐 사이트 바로가기**
+- [① 푸리에 변환 기초 (CFT)](https://wooonc6.github.io/fourier-visualizer/)
+- [② DFT vs FFT · FNO 연결](https://wooonc6.github.io/fourier-visualizer/fft.html)
+
 ---
 
 ## 📄 학습 자료
