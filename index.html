@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>푸리에 변환 시각화</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>푸리에 변환 <span class="accent">직접 체험하기</span></h1>
+    <p class="subtitle">복잡하게 뒤섞인 신호 속에서 원래의 주파수들을 분리해내는 수학적 기계</p>
+    <nav class="tabs">
+      <button class="tab active" data-section="composer">① 파형 합성</button>
+      <button class="tab" data-section="winding">② 원에 감기</button>
+      <button class="tab" data-section="spectrum">③ 주파수 스펙트럼</button>
+    </nav>
+  </header>
+
+  <!-- 섹션 1: 파형 합성 -->
+  <section id="composer" class="section active">
+    <div class="section-intro">
+      <h2>왜 어려운가? — 파형 합성 문제</h2>
+      <p>순수한 음 하나는 완벽한 <strong>사인파</strong>입니다. 하지만 여러 음이 동시에 울리면, 마이크는 이 모든 파형이 합쳐진 <strong>복합 파형</strong>만 기록합니다.<br>슬라이더를 조절해서 파형을 직접 합쳐보세요.</p>
+    </div>
+    <div class="canvas-wrap">
+      <div id="composer-canvas"></div>
+    </div>
+    <div class="controls" id="composer-controls">
+      <div class="wave-list" id="wave-list"></div>
+      <div class="btn-row">
+        <button class="btn-add" id="add-wave">+ 파형 추가</button>
+        <button class="btn-reset" id="reset-waves">초기화</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 섹션 2: 원에 감기 -->
+  <section id="winding" class="section">
+    <div class="section-intro">
+      <h2>핵심 아이디어 — 원에 감기</h2>
+      <p>파형을 원 위에 감아보세요. <strong>감기 주파수</strong>를 조절하면 원 위의 모양이 달라집니다.<br><span class="highlight">감기 주파수 = 신호 주파수</span>가 되는 순간, 빨간 질량 중심이 원점에서 멀리 튀어나옵니다.</p>
+    </div>
+    <div class="canvas-wrap two-panel">
+      <div id="winding-canvas"></div>
+    </div>
+    <div class="controls">
+      <div class="slider-group">
+        <label>신호 주파수 <span id="sig-freq-val" class="val-badge">3 Hz</span></label>
+        <input type="range" id="sig-freq" min="1" max="8" step="0.5" value="3" />
+      </div>
+      <div class="slider-group">
+        <label>감기 주파수 <span id="wind-freq-val" class="val-badge">1 Hz</span></label>
+        <input type="range" id="wind-freq" min="0" max="10" step="0.1" value="1" />
+      </div>
+      <div id="match-indicator" class="match-indicator hidden">✓ 주파수 일치! 질량 중심이 이동합니다</div>
+    </div>
+  </section>
+
+  <!-- 섹션 3: 주파수 스펙트럼 -->
+  <section id="spectrum" class="section">
+    <div class="section-intro">
+      <h2>거의 푸리에 변환 — 주파수 스펙트럼</h2>
+      <p>감기 주파수를 0에서 10 Hz까지 자동으로 훑으면서, 질량 중심의 x좌표를 기록합니다.<br>신호에 포함된 주파수에서 <strong>스파이크</strong>가 솟아오릅니다.</p>
+    </div>
+    <div class="canvas-wrap">
+      <div id="spectrum-canvas"></div>
+    </div>
+    <div class="controls">
+      <div class="wave-list" id="spec-wave-list"></div>
+      <div class="btn-row">
+        <button class="btn-add" id="spec-add-wave">+ 파형 추가</button>
+        <button class="btn-scan" id="spec-scan">▶ 스캔 시작</button>
+        <button class="btn-reset" id="spec-reset">초기화</button>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+  <script src="js/wave-composer.js"></script>
+  <script src="js/circle-winding.js"></script>
+  <script src="js/spectrum.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
