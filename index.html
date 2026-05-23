@@ -3,83 +3,294 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>푸리에 변환 시각화</title>
+  <title>푸리에 변환 — 시각적 완전 해설</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <h1>푸리에 변환 <span class="accent">직접 체험하기</span></h1>
-    <p class="subtitle">복잡하게 뒤섞인 신호 속에서 원래의 주파수들을 분리해내는 수학적 기계</p>
-    <nav class="tabs">
-      <button class="tab active" data-section="composer">① 파형 합성</button>
-      <button class="tab" data-section="winding">② 원에 감기</button>
-      <button class="tab" data-section="spectrum">③ 주파수 스펙트럼</button>
-    </nav>
+
+  <!-- 상단 고정 내비게이션 -->
+  <nav class="topnav">
+    <span class="nav-logo">∫ 푸리에 변환</span>
+    <div class="nav-links">
+      <a href="#s1">1. 왜 필요한가</a>
+      <a href="#s2">2. 3단계</a>
+      <a href="#s3">3. 원에 감기</a>
+      <a href="#s4">4. 스펙트럼</a>
+      <a href="#s5">5. 공식</a>
+      <a href="#s6">6. 정리</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="hero-eyebrow">3Blue1Brown "But what is the Fourier Transform?" 기반 정리</p>
+      <h1>푸리에 변환이란?</h1>
+      <p class="hero-sub">Fourier Transform — 시각적 완전 해설</p>
+      <div class="summary-box">
+        <span class="summary-label">핵심 한 줄 요약</span>
+        <p>복잡하게 뒤섞인 신호 속에서 원래의 순수한 주파수들을 분리해내는 수학적 기계.<br>
+        마치 여러 색이 섞인 페인트에서 원래 색을 하나씩 복원하는 것과 같습니다.</p>
+      </div>
+    </div>
   </header>
 
-  <!-- 섹션 1: 파형 합성 -->
-  <section id="composer" class="section active">
-    <div class="section-intro">
-      <h2>왜 어려운가? — 파형 합성 문제</h2>
-      <p>순수한 음 하나는 완벽한 <strong>사인파</strong>입니다. 하지만 여러 음이 동시에 울리면, 마이크는 이 모든 파형이 합쳐진 <strong>복합 파형</strong>만 기록합니다.<br>슬라이더를 조절해서 파형을 직접 합쳐보세요.</p>
-    </div>
-    <div class="canvas-wrap">
-      <div id="composer-canvas"></div>
-    </div>
-    <div class="controls" id="composer-controls">
-      <div class="wave-list" id="wave-list"></div>
-      <div class="btn-row">
-        <button class="btn-add" id="add-wave">+ 파형 추가</button>
-        <button class="btn-reset" id="reset-waves">초기화</button>
-      </div>
-    </div>
-  </section>
+  <main>
 
-  <!-- 섹션 2: 원에 감기 -->
-  <section id="winding" class="section">
-    <div class="section-intro">
-      <h2>핵심 아이디어 — 원에 감기</h2>
-      <p>파형을 원 위에 감아보세요. <strong>감기 주파수</strong>를 조절하면 원 위의 모양이 달라집니다.<br><span class="highlight">감기 주파수 = 신호 주파수</span>가 되는 순간, 빨간 질량 중심이 원점에서 멀리 튀어나옵니다.</p>
-    </div>
-    <div class="canvas-wrap two-panel">
-      <div id="winding-canvas"></div>
-    </div>
-    <div class="controls">
-      <div class="slider-group">
-        <label>신호 주파수 <span id="sig-freq-val" class="val-badge">3 Hz</span></label>
-        <input type="range" id="sig-freq" min="1" max="8" step="0.5" value="3" />
+    <!-- SECTION 1: 왜 필요한가 -->
+    <section id="s1" class="doc-section">
+      <div class="section-header">
+        <span class="section-num">1</span>
+        <h2>왜 필요한가? — 소리 파형의 합성 문제</h2>
       </div>
-      <div class="slider-group">
-        <label>감기 주파수 <span id="wind-freq-val" class="val-badge">1 Hz</span></label>
-        <input type="range" id="wind-freq" min="0" max="10" step="0.1" value="1" />
+      <div class="doc-text">
+        <p>순수한 음(音) 하나는 완벽한 <strong>사인파(sine wave)</strong>입니다. 예를 들어 라(A) 음은 초당 440번 진동하는 규칙적인 파형입니다. 그런데 피아노를 연주하면 여러 음이 동시에 울리고, 마이크는 이 모든 파형이 합쳐진 복잡한 최종 합산값만 기록합니다.</p>
+        <div class="callout question">
+          <span class="callout-icon">❓</span>
+          <p><strong>핵심 질문:</strong><br>
+          "이미 섞여버린 복잡한 파형에서 원래 어떤 주파수들이 포함되어 있었는지 어떻게 알아낼 수 있을까?"</p>
+        </div>
+        <p>이 문제를 해결하는 것이 바로 <strong>푸리에 변환(Fourier Transform)</strong>입니다. 3Blue1Brown은 이를 <em>"섞인 페인트에서 원래 색을 복원하는 것"</em>, 또는 <em>"스무디에서 원래 재료를 찾아내는 것"</em>에 비유합니다.</p>
       </div>
-      <div id="match-indicator" class="match-indicator hidden">✓ 주파수 일치! 질량 중심이 이동합니다</div>
-    </div>
-  </section>
 
-  <!-- 섹션 3: 주파수 스펙트럼 -->
-  <section id="spectrum" class="section">
-    <div class="section-intro">
-      <h2>거의 푸리에 변환 — 주파수 스펙트럼</h2>
-      <p>감기 주파수를 0에서 10 Hz까지 자동으로 훑으면서, 질량 중심의 x좌표를 기록합니다.<br>신호에 포함된 주파수에서 <strong>스파이크</strong>가 솟아오릅니다.</p>
-    </div>
-    <div class="canvas-wrap">
-      <div id="spectrum-canvas"></div>
-    </div>
-    <div class="controls">
-      <div class="wave-list" id="spec-wave-list"></div>
-      <div class="btn-row">
-        <button class="btn-add" id="spec-add-wave">+ 파형 추가</button>
-        <button class="btn-scan" id="spec-scan">▶ 스캔 시작</button>
-        <button class="btn-reset" id="spec-reset">초기화</button>
+      <div class="interactive-block">
+        <div class="interactive-label">▶ 직접 체험 — 파형 합성기</div>
+        <p class="interactive-desc">슬라이더로 주파수와 진폭을 바꿔보세요. 파형을 추가할수록 합성 파형(흰색)이 얼마나 복잡해지는지 확인하세요.</p>
+        <div class="canvas-container" id="composer-canvas"></div>
+        <div class="controls-panel">
+          <div class="wave-list" id="wave-list"></div>
+          <div class="btn-row">
+            <button class="btn-primary" id="add-wave">+ 파형 추가</button>
+            <button class="btn-secondary" id="reset-waves">초기화</button>
+          </div>
+        </div>
+        <div class="interpretation-box" id="composer-interp">
+          <div class="interp-icon">💡</div>
+          <div class="interp-content">
+            <strong>이렇게 읽으세요</strong>
+            <p id="composer-interp-text">각각의 색깔 선이 순수한 사인파 하나입니다. 흰색 굵은 선이 이 모든 파형을 더한 합성 파형 — 마이크가 실제로 기록하는 신호입니다. 파형을 추가할수록 합성 파형은 복잡해지지만, 마이크는 이 복잡한 형태만 기록합니다. 어떻게 다시 분리할 수 있을까요?</p>
+          </div>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+
+    <!-- SECTION 2: 3단계 접근법 -->
+    <section id="s2" class="doc-section">
+      <div class="section-header">
+        <span class="section-num">2</span>
+        <h2>핵심 아이디어 — 3단계 접근법</h2>
+      </div>
+      <div class="doc-text">
+        <p>3Blue1Brown이 제시하는 시각적 해법은 다음 세 단계로 이루어집니다.</p>
+      </div>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-num">STEP 01</div>
+          <div class="step-title">그래프를 원에 감기</div>
+          <div class="step-desc">시간축 위의 파형을 2D 평면의 원 위에 둘둘 감는다. 회전 속도(감기 주파수)를 자유롭게 조절할 수 있다.</div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">STEP 02</div>
+          <div class="step-title">질량 중심 관찰</div>
+          <div class="step-desc">감긴 선을 금속 와이어라 가정하고 질량 중심을 추적한다. 특정 주파수에서 한쪽으로 크게 쏠린다.</div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">STEP 03</div>
+          <div class="step-title">스파이크 = 주파수 검출</div>
+          <div class="step-desc">질량 중심의 x좌표를 그래프로 그리면, 신호에 포함된 주파수에서 뾰족한 스파이크(spike)가 솟아오른다.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: 원에 감기 -->
+    <section id="s3" class="doc-section">
+      <div class="section-header">
+        <span class="section-num">3</span>
+        <h2>그래프를 원에 감기 <span class="en">Winding a Graph Around a Circle</span></h2>
+      </div>
+      <div class="doc-text">
+        <h3>3-1. 두 가지 주파수</h3>
+        <p>원에 감는 과정에는 두 가지 독립적인 주파수가 존재합니다:</p>
+        <ul>
+          <li><strong class="c-blue">신호 주파수</strong>: 원래 파형이 초당 몇 번 진동하는지 (예: 3 Hz)</li>
+          <li><strong class="c-orange">감기 주파수</strong>: 그래프를 원에 얼마나 빠른 속도로 감아 돌리는지</li>
+        </ul>
+        <p>감기 주파수를 자유롭게 바꾸면 원형 그래프의 모양이 계속 달라집니다. 대부분의 경우 파형의 높은 곳과 낮은 곳이 사방으로 균일하게 분포하지만, <strong>특별한 순간</strong>이 찾아옵니다.</p>
+        <h3>3-2. 주파수가 일치할 때 — 질량 중심의 이동</h3>
+        <div class="callout key">
+          <span class="callout-icon">⚡</span>
+          <p><strong>핵심 순간</strong><br>
+          감기 주파수 = 신호의 원래 주파수가 되는 순간, 그래프의 모든 높은 봉우리가 한 방향(오른쪽)으로 모이면서 질량 중심이 원점에서 멀리 "툭" 튀어나옵니다. 이것이 푸리에 변환이 주파수를 검출하는 핵심 원리입니다.</p>
+        </div>
+      </div>
+
+      <div class="interactive-block">
+        <div class="interactive-label">▶ 직접 체험 — 원에 감기</div>
+        <p class="interactive-desc"><span class="c-orange">감기 주파수</span> 슬라이더를 천천히 올려보세요. 신호 주파수와 일치하는 순간 빨간 점(질량 중심)이 원점에서 멀리 튀어나옵니다.</p>
+        <div class="canvas-container" id="winding-canvas"></div>
+        <div class="controls-panel">
+          <div class="slider-group">
+            <label><span class="c-blue">신호 주파수</span> <span class="val-badge" id="sig-freq-val">3 Hz</span></label>
+            <input type="range" id="sig-freq" min="1" max="8" step="0.5" value="3" />
+          </div>
+          <div class="slider-group">
+            <label><span class="c-orange">감기 주파수</span> <span class="val-badge" id="wind-freq-val">1.0 Hz</span></label>
+            <input type="range" id="wind-freq" min="0" max="10" step="0.1" value="1" />
+          </div>
+        </div>
+        <div class="interpretation-box" id="winding-interp">
+          <div class="interp-icon">💡</div>
+          <div class="interp-content">
+            <strong>현재 상태 해석</strong>
+            <p id="winding-interp-text">감기 주파수(1.0 Hz)와 신호 주파수(3 Hz)가 다릅니다. 파형의 봉우리들이 원 전체에 고루 퍼지면서 질량 중심(빨간 점)이 원점 근처에 머뭅니다. 감기 주파수 슬라이더를 3 Hz로 맞춰보세요.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: 주파수 스펙트럼 -->
+    <section id="s4" class="doc-section">
+      <div class="section-header">
+        <span class="section-num">4</span>
+        <h2>주파수 스펙트럼 — "거의 푸리에 변환"</h2>
+      </div>
+      <div class="doc-text">
+        <p>감기 주파수를 0에서 높은 값까지 쭉 훑으면서 <strong>질량 중심의 x좌표를 기록</strong>하면, 주파수 스펙트럼 그래프가 완성됩니다. 이 그래프가 바로 <strong>"거의 푸리에 변환(Almost Fourier Transform)"</strong>입니다.</p>
+        <p>이 기계가 강력한 이유:</p>
+        <ul>
+          <li><strong>단일 신호</strong>: 해당 주파수 하나에서만 스파이크 발생</li>
+          <li><strong>혼합 신호</strong>: 포함된 모든 주파수 각각에서 스파이크 발생 → 구성 주파수를 모두 검출</li>
+          <li><strong>어떤 복잡한 신호도</strong>: 아무리 복잡하게 섞여도 원래 성분을 정확히 분리해냄</li>
+        </ul>
+      </div>
+
+      <div class="interactive-block">
+        <div class="interactive-label">▶ 직접 체험 — 주파수 스펙트럼 스캔</div>
+        <p class="interactive-desc">파형을 구성하고 <strong>스캔 시작</strong>을 누르면, 0→10 Hz를 자동으로 훑으며 스파이크가 실시간으로 그려집니다.</p>
+        <div class="canvas-container" id="spectrum-canvas"></div>
+        <div class="controls-panel">
+          <div class="wave-list" id="spec-wave-list"></div>
+          <div class="btn-row">
+            <button class="btn-secondary" id="spec-add-wave">+ 파형 추가</button>
+            <button class="btn-scan" id="spec-scan">▶ 스캔 시작</button>
+            <button class="btn-secondary" id="spec-reset">초기화</button>
+          </div>
+        </div>
+        <div class="interpretation-box" id="spectrum-interp">
+          <div class="interp-icon">💡</div>
+          <div class="interp-content">
+            <strong>스캔 결과 해석</strong>
+            <p id="spectrum-interp-text">스캔 시작을 누르면, 감기 주파수를 0 Hz에서 10 Hz까지 자동으로 높이면서 각 주파수에서의 질량 중심 크기를 기록합니다. 신호에 포함된 주파수에서만 그래프가 솟아오릅니다(스파이크). 이것이 푸리에 변환의 작동 방식입니다.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: 진짜 공식 -->
+    <section id="s5" class="doc-section">
+      <div class="section-header">
+        <span class="section-num">5</span>
+        <h2>진짜 푸리에 변환 공식</h2>
+      </div>
+      <div class="doc-text">
+        <h3>5-1. 공식</h3>
+      </div>
+
+      <div class="formula-block">
+        <div class="formula-display" id="formula-full"></div>
+        <div class="formula-note">위: 적분 범위 포함 전체 표기 / 아래: 간략 표기</div>
+      </div>
+
+      <div class="doc-text" style="margin-top:2rem;">
+        <h3>5-2. 공식 각 요소의 의미</h3>
+      </div>
+      <div class="formula-breakdown">
+        <div class="fb-item">
+          <div class="fb-symbol c-white" id="fb-ghat"></div>
+          <div class="fb-label">출력: 주파수 <em>f</em> 에서의 강도.<br>이 값이 크면 해당 주파수가 신호에 강하게 존재함.</div>
+        </div>
+        <div class="fb-item">
+          <div class="fb-symbol c-blue" id="fb-gt"></div>
+          <div class="fb-label">입력: 시간 도메인 신호.<br>마이크가 기록한 복잡한 합성 파형.</div>
+        </div>
+        <div class="fb-item">
+          <div class="fb-symbol c-orange" id="fb-euler"></div>
+          <div class="fb-label">파형을 원에 감는 동작.<br>오일러 공식으로 시계 방향 회전을 표현.</div>
+        </div>
+        <div class="fb-item">
+          <div class="fb-symbol c-green" id="fb-integral"></div>
+          <div class="fb-label">적분: 모든 시간에 걸친 평균.<br>= 감긴 와이어의 질량 중심을 계산하는 과정.</div>
+        </div>
+      </div>
+
+      <div class="doc-text" style="margin-top:2rem;">
+        <h3>5-3. 오일러 공식과의 연결</h3>
+        <div class="euler-box">
+          <div class="euler-formula" id="euler-formula"></div>
+        </div>
+        <p>오일러의 공식은 <strong>복소 지수가 원 위의 회전</strong>임을 말합니다. 여기에 마이너스(-) 부호를 붙여 시계 방향 회전(<span class="inline-math" id="cw-rot"></span>)으로 만들고, 원래 신호 g(t)를 곱하면 <strong>파형을 원에 감는 동작 전체가 단 하나의 수식</strong>으로 표현됩니다.</p>
+        <div class="callout info">
+          <span class="callout-icon">📌</span>
+          <p>적분 기호(∫)는 겁내지 않아도 됩니다. 이것은 그저 <strong>"감긴 와이어의 질량 중심 x좌표"를 정밀하게 계산하는 수학적 평균 과정</strong>입니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 6: 최종 정리 -->
+    <section id="s6" class="doc-section">
+      <div class="section-header">
+        <span class="section-num">6</span>
+        <h2>최종 정리</h2>
+      </div>
+      <div class="final-quote">
+        <div class="fq-label">푸리에 변환 — 한 문장으로</div>
+        <blockquote>
+          "시간 도메인의 신호 g(t)를 가져와, 알고 싶은 주파수 f의 속도로 원에 감은 뒤, 그 도형의 질량 중심이 한쪽으로 얼마나 쏠렸는지 측정하면 — 그 주파수가 원래 신호에 얼마나 강하게 들어있는지 알 수 있다."
+        </blockquote>
+      </div>
+      <div class="doc-text">
+        <h3>핵심 개념 정리</h3>
+        <div class="concept-grid">
+          <div class="concept-item">
+            <div class="concept-arrow">→</div>
+            <div>시간 도메인 → <strong>주파수 도메인</strong>으로의 변환</div>
+          </div>
+          <div class="concept-item">
+            <div class="concept-arrow">=</div>
+            <div>원에 감기 (Winding) = <strong>오일러 공식의 시각적 표현</strong></div>
+          </div>
+          <div class="concept-item">
+            <div class="concept-arrow">=</div>
+            <div>질량 중심 = <strong>적분의 직관적 의미</strong></div>
+          </div>
+          <div class="concept-item">
+            <div class="concept-arrow">≡</div>
+            <div>스파이크 ≡ <strong>해당 주파수 성분이 신호에 존재</strong>함을 의미</div>
+          </div>
+        </div>
+        <h3 style="margin-top:2rem;">응용 분야</h3>
+        <div class="app-tags">
+          <span class="app-tag">🎵 오디오 처리</span>
+          <span class="app-tag">🖼️ 이미지 압축 (JPEG)</span>
+          <span class="app-tag">📡 통신</span>
+          <span class="app-tag">⚛️ 물리학</span>
+          <span class="app-tag">🏥 의학 (MRI)</span>
+        </div>
+        <div class="source-note">
+          <p>원본 영상: 3Blue1Brown — <a href="https://www.3blue1brown.com/lessons/fourier-transforms" target="_blank" rel="noopener">"But what is the Fourier Transform? A visual introduction."</a></p>
+        </div>
+      </div>
+    </section>
+
+  </main>
 
   <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
   <script src="js/wave-composer.js"></script>
   <script src="js/circle-winding.js"></script>
   <script src="js/spectrum.js"></script>
+  <script src="js/formula.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
