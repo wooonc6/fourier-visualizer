@@ -1,0 +1,107 @@
+.c-red    { color: var(--red); }
+.c-purple { color: var(--purple); }
+
+/* Complexity table */
+.complexity-table {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+.ct-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  border-bottom: 1px solid var(--border);
+  padding: 0.65rem 1rem;
+  gap: 1rem;
+  align-items: center;
+}
+.ct-row:last-child { border-bottom: none; }
+.ct-row.header { background: var(--surface); font-size: 0.78rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* DFT logic */
+.dft-logic {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.8rem 0;
+}
+.logic-step {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.logic-step.highlight-step {
+  background: rgba(248, 81, 73, 0.08);
+  border-color: rgba(248, 81, 73, 0.3);
+  font-size: 1rem;
+}
+.logic-arrow { color: var(--accent); margin: 0 0.4rem; }
+
+/* Legend */
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+.legend-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+}
+
+/* N hint */
+.n-hint {
+  font-size: 0.72rem;
+  color: var(--border);
+  margin-top: 0.3rem;
+  letter-spacing: 0.3px;
+}
+
+/* Pipeline */
+.pipeline {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin: 1rem 0;
+  flex-wrap: wrap;
+}
+.pipe-step {
+  flex: 1;
+  min-width: 180px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.1rem;
+}
+.pipe-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.6rem;
+  font-size: 1.3rem;
+  color: var(--muted);
+}
+.pipe-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+.pipe-desc {
+  font-size: 0.83rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.c-purple { color: var(--purple); }
+
+@media (max-width: 640px) {
+  .pipeline { flex-direction: column; }
+  .pipe-arrow { transform: rotate(90deg); padding: 0.3rem 0; }
+  .ct-row { grid-template-columns: 110px 1fr; }
+}

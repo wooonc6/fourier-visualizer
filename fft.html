@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DFT vs FFT — 같은 결과, 다른 속도</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="fft.css" />
+</head>
+<body>
+
+  <nav class="topnav">
+    <a href="index.html" class="nav-logo">← 푸리에 변환 기초</a>
+    <span class="nav-logo" style="color:var(--orange)">∑ DFT vs FFT</span>
+    <div class="nav-links">
+      <a href="#s40">0. O() 표기법</a>
+      <a href="#s41">1. DFT</a>
+      <a href="#s42">2. FFT</a>
+      <a href="#s5">3. FNO 연결</a>
+    </div>
+  </nav>
+
+  <header class="hero" style="background:linear-gradient(180deg,#1a0f2e 0%,var(--bg) 100%)">
+    <div class="hero-inner">
+      <p class="hero-eyebrow">연속 푸리에 변환(CFT)의 직관이 실제 계산과 프로젝트로 이어지는 흐름</p>
+      <h1>DFT vs FFT</h1>
+      <p class="hero-sub">같은 결과, 다른 속도 · FNO 연결</p>
+      <div class="summary-box">
+        <span class="summary-label">핵심 한 줄 요약</span>
+        <p>FFT는 새로운 변환이 아니다. DFT와 수학적으로 완전히 동일한 결과를 내는,<br>
+        <strong>가장 영리하게 계산하는 알고리즘</strong>이다.</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- SECTION 4-0: O() 표기법 -->
+    <section id="s40" class="doc-section">
+      <div class="section-header">
+        <span class="section-num" style="background:var(--orange)">4-0</span>
+        <h2>먼저: O( ) 표기법이란?</h2>
+      </div>
+      <div class="doc-text">
+        <p>알고리즘의 속도를 비교할 때 입력 크기 N이 커질수록 연산 횟수가 얼마나 빠르게 늘어나는가를 나타내는 표기법이다. <strong>정확한 연산 횟수보다 증가 패턴이 중요하다.</strong></p>
+        <div class="complexity-table">
+          <div class="ct-row header">
+            <div>표기</div><div>직관적 의미</div>
+          </div>
+          <div class="ct-row">
+            <div class="c-green"><strong>O(N)</strong></div>
+            <div>N이 2배가 되면 연산도 2배. 선형 증가. 가장 이상적.</div>
+          </div>
+          <div class="ct-row">
+            <div class="c-blue"><strong>O(N log N)</strong></div>
+            <div>N이 2배가 되면 연산은 약 2.x배. 선형에 가까운 준선형 증가.</div>
+          </div>
+          <div class="ct-row">
+            <div class="c-red"><strong>O(N²)</strong></div>
+            <div>N이 2배가 되면 연산은 4배. 제곱 증가. N이 클수록 폭발적으로 늘어난다.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="interactive-block">
+        <div class="interactive-label">▶ 직접 체험 — 성장 곡선 비교</div>
+        <p class="interactive-desc">슬라이더로 N의 최대값을 바꿔가며 세 가지 성장 곡선이 얼마나 다르게 벌어지는지 확인하세요.</p>
+        <div class="canvas-container" id="complexity-canvas"></div>
+        <div class="controls-panel">
+          <div class="slider-group">
+            <label>N 최대값 <span class="val-badge" id="n-max-val">256</span></label>
+            <input type="range" id="n-max" min="16" max="1024" step="16" value="256" />
+          </div>
+          <div class="legend-row">
+            <span class="legend-dot" style="background:#3fb950"></span><span class="c-green">O(N)</span>
+            <span class="legend-dot" style="background:#58a6ff"></span><span class="c-blue">O(N log N)</span>
+            <span class="legend-dot" style="background:#f85149"></span><span class="c-red">O(N²)</span>
+          </div>
+        </div>
+        <div class="interpretation-box">
+          <div class="interp-icon">💡</div>
+          <div class="interp-content">
+            <strong>이렇게 읽으세요</strong>
+            <p id="complexity-interp">N이 작을 때는 세 곡선의 차이가 작습니다. 슬라이더를 오른쪽으로 밀수록 O(N²)이 폭발적으로 커지는 반면 O(N log N)은 O(N)에 가까운 완만한 기울기를 유지합니다. FFT가 N log N으로 동작한다는 것이 왜 중요한지 한눈에 보입니다.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4-1: DFT -->
+    <section id="s41" class="doc-section">
+      <div class="section-header">
+        <span class="section-num" style="background:var(--orange)">4-1</span>
+        <h2>이산 푸리에 변환 (DFT) — 왜 N²인가?</h2>
+      </div>
+      <div class="doc-text">
+        <p>DFT는 연속 적분을 N개 샘플의 합산으로 이산화한 버전이다.</p>
+      </div>
+
+      <div class="formula-block">
+        <div class="formula-display" id="dft-formula"></div>
+        <div class="formula-note">ω_N = e<sup>−2πi/N</sup> (N차 단위근) — 앞서 본 e<sup>−2πift</sup>의 이산 버전. 복소 평면 단위원을 N등분하는 점들로, 같은 "회전하는 탐지기" 역할을 한다.</div>
+      </div>
+
+      <div class="doc-text" style="margin-top:1.5rem;">
+        <h3>왜 N²인가 — 한 줄 설명</h3>
+        <div class="dft-logic">
+          <div class="logic-step">출력 X[0], X[1], …, X[N−1] <span class="logic-arrow">→</span> 총 <strong>N개</strong></div>
+          <div class="logic-step">각 X[k]를 구하려면 입력 x[0]~x[N−1] <strong>N개 전부</strong>와 곱셈</div>
+          <div class="logic-step highlight-step">연산 총합 = N개 × N번 = <strong class="c-red">N²</strong></div>
+        </div>
+      </div>
+
+      <div class="interactive-block">
+        <div class="interactive-label">▶ 직접 체험 — N에 따른 DFT 연산 횟수</div>
+        <p class="interactive-desc">N을 바꾸면 실제로 몇 번의 연산이 필요한지 확인하세요.</p>
+        <div class="canvas-container" id="dft-counter-canvas"></div>
+        <div class="controls-panel">
+          <div class="slider-group">
+            <label>샘플 수 N <span class="val-badge" id="dft-n-val">64</span></label>
+            <input type="range" id="dft-n" min="2" max="10" step="1" value="6" />
+            <div class="n-hint">← 2 · · · 4 · · · 8 · · · 16 · · · 32 · · · 64 · · · 128 · · · 256 · · · 512 · · · 1024 →</div>
+          </div>
+        </div>
+        <div class="interpretation-box">
+          <div class="interp-icon">💡</div>
+          <div class="interp-content">
+            <strong>현재 수치</strong>
+            <p id="dft-interp">N = 64일 때 DFT는 4,096번 연산이 필요합니다. N을 오른쪽으로 밀면 연산 횟수가 제곱으로 늘어납니다.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4-2: FFT -->
+    <section id="s42" class="doc-section">
+      <div class="section-header">
+        <span class="section-num" style="background:var(--orange)">4-2</span>
+        <h2>고속 푸리에 변환 (FFT) — 왜 N log N인가?</h2>
+      </div>
+      <div class="doc-text">
+        <p>FFT는 DFT와 수학적으로 완전히 동일한 결과를 낸다. 차이는 <strong>계산 방법</strong>이다. 단위근의 대칭성을 이용해 중복 계산을 제거하는 <strong>분할 정복 알고리즘</strong>이다.</p>
+        <h3>핵심 아이디어 — 절반이 공짜</h3>
+        <div class="callout key">
+          <span class="callout-icon">⚡</span>
+          <div>
+            <p><strong>대칭성 — 한 번 계산으로 두 결과</strong></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="formula-block">
+        <div class="formula-display" id="fft-formula"></div>
+        <div class="formula-note">E[k]: 짝수 인덱스 샘플의 DFT, O[k]: 홀수 인덱스 샘플의 DFT<br>
+        두 식이 E[k]와 O[k]를 <strong>공유</strong>한다. 상위 N/2개만 계산하면 하위 N/2개는 부호만 바꿔 공짜로 얻는다.</div>
+      </div>
+
+      <div class="doc-text" style="margin-top:1.5rem;">
+        <h3>왜 O(N log N)인가</h3>
+        <div class="steps-grid" style="grid-template-columns:1fr 1fr;">
+          <div class="step-card">
+            <div class="step-num">분할 단계 수</div>
+            <div class="step-title">log₂N 레벨</div>
+            <div class="step-desc">N개를 매번 절반으로 쪼개면<br>N → N/2 → N/4 → … → 1<br>단계 수 = log₂N<br>(N=8 → 3단계, N=1024 → 10단계)</div>
+          </div>
+          <div class="step-card">
+            <div class="step-num">각 레벨 작업량</div>
+            <div class="step-title">레벨당 O(N)</div>
+            <div class="step-desc">각 레벨에서 N개의 원소를 한 번씩 처리<br><br>전체 = log₂N 레벨 × O(N)<br>= <strong>O(N log N)</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="interactive-block">
+        <div class="interactive-label">▶ 직접 체험 — DFT vs FFT 연산 비교</div>
+        <p class="interactive-desc">N을 바꿀 때 DFT(N²)와 FFT(N log N)의 연산 횟수 차이와 속도 향상 배수를 확인하세요.</p>
+        <div class="canvas-container" id="compare-canvas"></div>
+        <div class="controls-panel">
+          <div class="slider-group">
+            <label>샘플 수 N (2의 거듭제곱) <span class="val-badge" id="compare-n-val">64</span></label>
+            <input type="range" id="compare-n" min="2" max="10" step="1" value="6" />
+            <div class="n-hint">← 4 · · · 8 · · · 16 · · · 32 · · · 64 · · · 128 · · · 256 · · · 512 · · · 1024 →</div>
+          </div>
+        </div>
+        <div class="interpretation-box">
+          <div class="interp-icon">💡</div>
+          <div class="interp-content">
+            <strong>속도 비교</strong>
+            <p id="compare-interp">N = 64일 때 DFT는 4,096번, FFT는 384번 연산합니다. FFT가 약 10.7배 빠릅니다.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="doc-text" style="margin-top:1.5rem;">
+        <div class="callout info">
+          <span class="callout-icon">📌</span>
+          <div>
+            <p><strong>한 줄 요약</strong></p>
+            <p>DFT: "모든 출력이 모든 입력을 각각 참조" → N×N = <span class="c-red">O(N²)</span><br>
+            FFT: "절반씩 쪼아 재활용" → log₂N 레벨 × O(N) = <span class="c-blue">O(N log N)</span></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: FNO 연결 -->
+    <section id="s5" class="doc-section">
+      <div class="section-header">
+        <span class="section-num" style="background:var(--purple)">5</span>
+        <h2>프로젝트와의 연결</h2>
+      </div>
+      <div class="doc-text">
+        <p>여기까지 배운 개념이 프로젝트에서 어떻게 이어지는지 핵심만 정리한다.</p>
+
+        <h3>5-1. 합성곱 정리 — FNO가 FFT를 쓰는 이유</h3>
+        <p>신호에서 주파수를 분리하던 FFT가 PDE 공간장에도 그대로 적용된다. 연결 고리는 <strong>합성곱 정리</strong>다.</p>
+      </div>
+
+      <div class="formula-block">
+        <div class="formula-display" id="conv-formula"></div>
+        <div class="formula-note">공간 전체에 걸친 합성곱(전역 상호작용) = 주파수 공간에서의 점별 곱셈.<br>
+        O(N²)이 필요하던 전역 필터링이 FFT/IFFT 변환 비용을 포함해도 <strong>O(N log N)</strong>으로 줄어든다.</div>
+      </div>
+
+      <div class="doc-text" style="margin-top:1.5rem;">
+        <h3>5-2. 모델 안에서의 분업</h3>
+      </div>
+
+      <div class="pipeline">
+        <div class="pipe-step">
+          <div class="pipe-label c-blue">FFT (이 파트)</div>
+          <div class="pipe-desc">각 시각 t의 공간 스냅샷 u(x,t)를 주파수 모드 û(k,t)로 분해. PDE 해의 <strong>전역 공간 구조</strong>를 표현.</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="pipe-label c-orange">FNO Layer</div>
+          <div class="pipe-desc">학습 가능한 R(k)로 중요한 주파수 모드를 선택·필터링. IFFT로 공간 특징 복원.</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="pipe-label c-purple">SSM (시간)</div>
+          <div class="pipe-desc">FNO가 추출한 공간 특징이 시간에 따라 어떻게 진화하는지 Attention 없이 학습.</div>
+        </div>
+      </div>
+
+      <div class="doc-text" style="margin-top:1.5rem;">
+        <div class="callout key">
+          <span class="callout-icon">⚡</span>
+          <div>
+            <p><strong>Attention-free가 가능한 이유</strong></p>
+            <p>Attention은 모든 위치 쌍 (i, j)를 비교해 전역 구조를 발견한다 → <span class="c-red">O(N²)</span>.<br>
+            FNO는 FFT가 처음부터 <strong>물리적으로 올바른 기저(푸리에 모드)</strong>를 제공하기 때문에, 이 조회 과정이 불필요하다. 합성곱 정리로 전역 상호작용을 <span class="c-blue">O(N log N)</span>에 처리하는 것이 이 프로젝트의 핵심 설계 근거다.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="doc-text" style="margin-top:2rem;">
+        <div class="source-note">
+          <p>← <a href="index.html">푸리에 변환 기초 (CFT)</a>로 돌아가기</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="js/fft-visuals.js"></script>
+  <script src="js/fft-formula.js"></script>
+</body>
+</html>
