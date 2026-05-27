@@ -6,6 +6,7 @@
 **🌐 사이트 바로가기**
 - [① 푸리에 변환 기초 (CFT)](https://wooonc6.github.io/fourier-visualizer/)
 - [② DFT vs FFT · FNO 연결](https://wooonc6.github.io/fourier-visualizer/fft.html)
+- [③ 전체 스토리 — 오일러 공식부터 FNO까지](https://wooonc6.github.io/fourier-visualizer/fourier-story.html)
 
 ---
 
@@ -39,6 +40,26 @@
 
 ---
 
+### [③ 전체 스토리 — 오일러 공식부터 FNO까지](https://wooonc6.github.io/fourier-visualizer/fourier-story.html)
+
+오일러 공식에서 출발해 FNO 적용까지 11개 섹션을 스크롤로 이어가는 통합 해설 페이지입니다.
+
+| 섹션 | 내용 | 인터랙션 |
+|------|------|----------|
+| 1. 오일러 공식 | e^iθ = cosθ + i·sinθ | θ 슬라이더로 회전 확인 |
+| 2. 복잡한 파형 | 여러 주파수의 합성 | f₁/f₂/f₃ 진폭 조절 |
+| 3. FT 수식 | F(ω) = ∫f(t)e^{−iωt}dt | — |
+| 4. 원에 감기 | 복소평면 Wrapping | 신호/감기 주파수 슬라이더 |
+| 5. 질량 중심 | 주파수 세기 측정 | 실시간 질량 중심 계산 |
+| 6. 발견의 순간 | 주파수 정렬 | — |
+| 7. 스펙트럼 | 주파수 스파이크 | 2번 연동 실시간 갱신 |
+| 8. FT 수식 해설 | 세 요소 분해 | — |
+| 9. DFT | 이산화 + N=4 계산기 | 샘플 값 입력 |
+| 10. FFT | O(N²)→O(N log N) | N 슬라이더 + 나비 다이어그램 |
+| 11. FNO 역할 | FNO + SSM 구조 | — |
+
+---
+
 ## 기술 스택
 
 - HTML / CSS / JavaScript
@@ -49,3 +70,4 @@
 ## 원본
 
 3Blue1Brown — [But what is the Fourier Transform? A visual introduction.](https://www.3blue1brown.com/lessons/fourier-transforms)
+
