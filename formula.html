@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fourier Transform</title>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black: #0a0a0a;
+  --white: #fafaf8;
+  --gray-100: #f0efeb;
+  --gray-200: #dddbd4;
+  --gray-400: #9b9890;
+  --gray-600: #5a5854;
+  --accent: #1a1a1a;
+  --highlight: #e8e400;
+  --blue-soft: #dce8f5;
+  --red-soft: #f5dce0;
+  --green-soft: #daf0e4;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--white);
+  color: var(--black);
+  font-family: 'EB Garamond', Georgia, serif;
+  overflow: hidden;
+}
+
+/* ── 슬라이드 컨테이너 ── */
+.deck { width: 100vw; height: 100vh; position: relative; }
+
+.slide {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  padding: 56px 72px 48px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+.slide.active { opacity: 1; pointer-events: all; }
+
+/* ── 공통 타이포 ── */
+.slide-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 300;
+  letter-spacing: .18em; text-transform: uppercase;
+  color: var(--gray-400);
+  margin-bottom: 12px;
+}
+.slide-title {
+  font-size: 38px; font-weight: 400; line-height: 1.15;
+  letter-spacing: -.01em;
+  color: var(--black);
+  margin-bottom: 8px;
+}
+.slide-title em { font-style: italic; }
+.slide-sub {
+  font-size: 16px; color: var(--gray-600);
+  margin-bottom: 48px; font-style: italic;
+}
+
+/* ── 수식 블록 ── */
+.formula-build {
+  display: flex; flex-direction: column;
+  gap: 0; flex: 1; justify-content: center;
+}
+
+.formula-row {
+  display: flex; align-items: flex-start;
+  gap: 0;
+  opacity: 0; transform: translateY(12px);
+  transition: opacity .5s ease, transform .5s ease;
+}
+.formula-row.show { opacity: 1; transform: none; }
+
+.formula-eq {
+  font-family: 'EB Garamond', serif;
+  font-size: 52px; font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--black);
+  padding: 24px 0;
+}
+.formula-eq .part {
+  display: inline-block;
+  transition: color .4s, background .4s;
+  border-radius: 4px;
+  padding: 0 3px;
+}
+.formula-eq .part.dim { color: var(--gray-200); }
+.formula-eq .part.lit { color: var(--black); }
+.formula-eq .part.hi-blue  { background: var(--blue-soft);  color: #1a4a7a; }
+.formula-eq .part.hi-red   { background: var(--red-soft);   color: #7a1a24; }
+.formula-eq .part.hi-green { background: var(--green-soft); color: #0f5a2a; }
+.formula-eq .part.hi-yellow { background: var(--highlight); color: var(--black); }
+
+.annot-col {
+  flex: 1; padding: 28px 0 0 40px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.annot {
+  display: flex; align-items: flex-start; gap: 10px;
+  opacity: 0; transform: translateX(8px);
+  transition: opacity .5s ease .15s, transform .5s ease .15s;
+}
+.annot.show { opacity: 1; transform: none; }
+
+.annot-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  margin-top: 7px; flex-shrink: 0;
+}
+.dot-blue  { background: #378add; }
+.dot-red   { background: #c84b5a; }
+.dot-green { background: #1d9e75; }
+.dot-yellow { background: #b8b000; }
+
+.annot-text { font-size: 15px; line-height: 1.55; color: var(--gray-600); font-style: italic; }
+.annot-text strong { font-style: normal; color: var(--black); font-weight: 500; }
+
+/* ── 구분선 ── */
+.divider {
+  width: 40px; height: 1px;
+  background: var(--gray-200);
+  margin: 24px 0;
+}
+
+/* ── Step indicator ── */
+.step-bar {
+  position: absolute; bottom: 40px; left: 72px;
+  display: flex; align-items: center; gap: 8px;
+}
+.step-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gray-200);
+  transition: background .3s;
+  cursor: pointer;
+}
+.step-dot.on { background: var(--black); }
+.step-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--gray-400);
+  letter-spacing: .1em;
+  margin-left: 8px;
+}
+
+/* ── Nav ── */
+.nav-btn {
+  position: absolute; bottom: 32px; right: 72px;
+  background: none; border: 1px solid var(--gray-200);
+  color: var(--black); cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: .12em;
+  padding: 8px 18px; border-radius: 2px;
+  transition: background .2s, border-color .2s;
+}
+.nav-btn:hover { background: var(--gray-100); border-color: var(--gray-400); }
+
+/* ── 슬라이드 0 — 표지 ── */
+#s0 { justify-content: center; }
+#s0 .big {
+  font-size: 72px; font-weight: 400; letter-spacing: -.02em;
+  line-height: 1; color: var(--black);
+  animation: fadeUp .8s ease both;
+}
+#s0 .big em { font-style: italic; color: var(--gray-400); }
+#s0 .line {
+  width: 56px; height: 1.5px; background: var(--black);
+  margin: 32px 0;
+  animation: fadeUp .8s ease .15s both;
+}
+#s0 .desc {
+  font-size: 17px; color: var(--gray-600); font-style: italic;
+  max-width: 500px; line-height: 1.7;
+  animation: fadeUp .8s ease .25s both;
+}
+#s0 .mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; color: var(--gray-400);
+  margin-top: 48px; letter-spacing: .1em;
+  animation: fadeUp .8s ease .35s both;
+}
+
+/* ── 슬라이드 1 — 오일러 ── */
+.euler-grid {
+  display: grid; grid-template-columns: 1fr 320px;
+  gap: 48px; flex: 1; align-items: center;
+}
+.euler-formula {
+  font-size: 58px; font-weight: 400;
+  line-height: 1.3; color: var(--black);
+}
+.euler-formula .item {
+  display: flex; align-items: baseline; gap: 16px;
+  margin-bottom: 4px;
+  opacity: 0; transform: translateY(10px);
+  transition: opacity .5s ease, transform .5s ease;
+}
+.euler-formula .item.show { opacity: 1; transform: none; }
+.euler-formula .arrow { font-size: 22px; color: var(--gray-400); }
+.euler-formula .desc { font-size: 14px; color: var(--gray-600); font-style: italic; }
+.circle-vis {
+  width: 280px; height: 280px;
+  position: relative; margin: 0 auto;
+}
+.circle-vis svg { width: 100%; height: 100%; }
+
+/* ── 슬라이드 2 — FT 정의 ── */
+.ft-full {
+  font-family: 'EB Garamond', serif;
+  font-size: 56px; font-weight: 400;
+  text-align: center;
+  margin: 0 auto 40px;
+  line-height: 1.2;
+  color: var(--black);
+}
+.ft-full sup { font-size: 32px; }
+.meaning-grid {
+  display: grid; grid-template-columns: repeat(3,1fr);
+  gap: 24px; margin-top: 16px;
+}
+.meaning-card {
+  border: 1px solid var(--gray-200);
+  border-radius: 6px; padding: 20px 22px;
+  opacity: 0; transform: translateY(12px);
+  transition: opacity .5s ease, transform .5s ease;
+}
+.meaning-card.show { opacity: 1; transform: none; }
+.mc-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px; font-weight: 300; margin-bottom: 10px;
+}
+.mc-label.blue  { color: #1a4a7a; }
+.mc-label.red   { color: #7a1a24; }
+.mc-label.green { color: #0f5a2a; }
+.mc-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+.mc-desc  { font-size: 13.5px; color: var(--gray-600); font-style: italic; line-height: 1.55; }
+
+/* ── 슬라이드 3 — 감기 원리 ── */
+.why-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 48px; flex: 1; align-items: start;
+}
+.why-block { padding-top: 8px; }
+.why-case {
+  border-left: 2px solid var(--gray-200);
+  padding: 16px 20px; margin-bottom: 20px;
+  opacity: 0; transform: translateX(-8px);
+  transition: opacity .5s ease, transform .5s ease;
+}
+.why-case.show { opacity: 1; transform: none; }
+.why-case.match { border-left-color: var(--black); }
+.why-case-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: .12em;
+  color: var(--gray-400); margin-bottom: 6px;
+}
+.why-case-eq { font-size: 22px; margin-bottom: 6px; }
+.why-case-desc { font-size: 14px; color: var(--gray-600); font-style: italic; line-height: 1.5; }
+.why-key {
+  font-size: 18px; line-height: 1.6;
+  border-top: 1px solid var(--gray-200);
+  padding-top: 20px; margin-top: 8px;
+  opacity: 0;
+  transition: opacity .6s ease .3s;
+}
+.why-key.show { opacity: 1; }
+.why-key strong { display: block; font-size: 22px; margin-bottom: 6px; }
+
+/* ── 슬라이드 4 — 수식 종합 ── */
+.final-box {
+  border: 1px solid var(--gray-200);
+  border-radius: 8px; padding: 40px 48px;
+  margin: 0 auto; max-width: 740px;
+  text-align: center;
+}
+.final-eq { font-size: 54px; margin-bottom: 36px; }
+.final-table { width: 100%; border-collapse: collapse; }
+.final-table td {
+  padding: 10px 16px; text-align: left;
+  border-top: 1px solid var(--gray-100);
+  font-size: 15px;
+}
+.final-table td:first-child {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px; font-weight: 300;
+  width: 220px; color: var(--gray-600);
+  white-space: nowrap;
+}
+.final-table td:last-child { color: var(--gray-600); font-style: italic; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: none; }
+}
+</style>
+</head>
+<body>
+<div class="deck">
+
+<!-- ── 슬라이드 0: 표지 ── -->
+<div class="slide active" id="s0">
+  <div class="big">Fourier<br><em>Transform</em></div>
+  <div class="line"></div>
+  <div class="desc">복잡한 신호를 단순한 회전의 합으로 분해하는 수학적 도구</div>
+  <div class="mono">F(ω) = ∫ f(t) · e⁻ⁱωᵗ dt</div>
+</div>
+
+<!-- ── 슬라이드 1: 오일러 공식 ── -->
+<div class="slide" id="s1">
+  <div class="slide-label">Step 0 — 준비</div>
+  <div class="slide-title">오일러 공식 — <em>회전의 언어</em></div>
+  <div class="slide-sub">복소 지수 함수는 단위원 위의 회전 운동과 일치한다</div>
+  <div class="euler-grid">
+    <div>
+      <div class="euler-formula">
+        <div class="item" id="eu0">
+          e<sup>iθ</sup> = cos θ + i·sin θ
+        </div>
+        <div class="item" id="eu1" style="font-size:18px; margin-top:24px;">
+          <span class="arrow">→</span>
+          <span class="desc">cos θ : 실수축(x) — 좌우 진동</span>
+        </div>
+        <div class="item" id="eu2" style="font-size:18px;">
+          <span class="arrow">→</span>
+          <span class="desc">sin θ : 허수축(y) — 상하 진동</span>
+        </div>
+        <div class="item" id="eu3" style="font-size:18px;">
+          <span class="arrow">→</span>
+          <span class="desc">e<sup>iθ</sup> : 단위원 위의 점 — <strong>파동 = 회전</strong></span>
+        </div>
+        <div class="item" id="eu4" style="font-size:18px; margin-top:16px; border-top:1px solid #ddd; padding-top:16px;">
+          <span class="arrow">→</span>
+          <span class="desc">e<sup>−iωt</sup> : ω 속도로 <strong>시계 방향</strong> 회전 (FT에서 사용)</span>
+        </div>
+      </div>
+    </div>
+    <div class="circle-vis">
+      <svg viewBox="0 0 280 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="140" cy="140" r="100" stroke="#dddbd4" stroke-width="1"/>
+        <line x1="40" y1="140" x2="240" y2="140" stroke="#dddbd4" stroke-width="1"/>
+        <line x1="140" y1="40" x2="140" y2="240" stroke="#dddbd4" stroke-width="1"/>
+        <line x1="140" y1="140" x2="211" y2="90" stroke="#0a0a0a" stroke-width="1.5" id="radius-line"/>
+        <circle cx="211" cy="90" r="5" fill="#0a0a0a" id="point-dot"/>
+        <line x1="211" y1="90" x2="211" y2="140" stroke="#378add" stroke-width="1" stroke-dasharray="4 3"/>
+        <line x1="140" y1="90" x2="211" y2="90" stroke="#c84b5a" stroke-width="1" stroke-dasharray="4 3"/>
+        <text x="222" y="118" font-family="EB Garamond" font-size="13" fill="#378add" font-style="italic">sin θ</text>
+        <text x="168" y="158" font-family="EB Garamond" font-size="13" fill="#c84b5a" font-style="italic">cos θ</text>
+        <text x="148" y="138" font-family="JetBrains Mono" font-size="10" fill="#9b9890">θ</text>
+        <text x="244" y="144" font-family="EB Garamond" font-size="13" fill="#9b9890">Re</text>
+        <text x="144" y="34" font-family="EB Garamond" font-size="13" fill="#9b9890">Im</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ── 슬라이드 2: FT 정의 — 빌드업 ── -->
+<div class="slide" id="s2">
+  <div class="slide-label">Step 1 — 정의</div>
+  <div class="slide-title">Fourier Transform 공식</div>
+  <div class="slide-sub">세 요소를 하나씩 쌓아올리면 완성된다</div>
+  <div class="formula-build">
+    <div class="formula-row show" id="fr-lhs">
+      <div class="formula-eq">
+        <span class="part lit" id="p-F">F(ω)</span>
+        <span class="part lit" id="p-eq"> = </span>
+        <span class="part dim" id="p-int">∫</span>
+        <span class="part dim" id="p-ft">f(t)</span>
+        <span class="part dim" id="p-dot"> · </span>
+        <span class="part dim" id="p-eiwt">e<sup>−iωt</sup></span>
+        <span class="part dim" id="p-dt"> dt</span>
+      </div>
+      <div class="annot-col" id="annot-lhs">
+        <div class="annot show">
+          <div class="annot-dot" style="background:#9b9890"></div>
+          <div class="annot-text"><strong>F(ω)</strong> — 출력. 주파수 ω 성분의 강도</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 슬라이드 3: e^-iωt ── -->
+<div class="slide" id="s3">
+  <div class="slide-label">Step 2 — 첫 번째 요소</div>
+  <div class="slide-title"><em>e</em><sup style="font-size:.6em">−iωt</sup> — 회전자</div>
+  <div class="slide-sub">신호를 ω 속도로 원에 감아올리는 동작</div>
+  <div class="formula-build">
+    <div class="formula-row show">
+      <div class="formula-eq">
+        <span class="part" style="color:var(--gray-200)">F(ω) = ∫ f(t) · </span><span class="part hi-blue">e<sup>−iωt</sup></span><span class="part" style="color:var(--gray-200)"> dt</span>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="formula-row show" style="flex-direction:column; gap:16px;">
+      <div class="annot show">
+        <div class="annot-dot dot-blue"></div>
+        <div class="annot-text">오일러 공식에 <strong>−</strong>를 붙여 시계 방향으로 회전하는 함수</div>
+      </div>
+      <div class="annot show" style="transition-delay:.1s">
+        <div class="annot-dot dot-blue"></div>
+        <div class="annot-text">ω가 클수록 빠르게 회전 — <strong>감기 주파수</strong></div>
+      </div>
+      <div class="annot show" style="transition-delay:.2s">
+        <div class="annot-dot dot-blue"></div>
+        <div class="annot-text">t = 0 → 1일 때 정확히 ω/(2π) 번 완전 회전</div>
+      </div>
+      <div class="annot show" style="transition-delay:.3s">
+        <div class="annot-dot dot-blue"></div>
+        <div class="annot-text" style="font-style:normal; padding:12px 16px; background:var(--blue-soft); border-radius:4px; color:#1a4a7a">
+          이 함수 하나가 "원에 감기" 동작 전체를 수식으로 표현한 것
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 슬라이드 4: f(t)·e^-iωt ── -->
+<div class="slide" id="s4">
+  <div class="slide-label">Step 3 — 두 번째 요소</div>
+  <div class="slide-title"><em>f</em>(t) · <em>e</em><sup style="font-size:.6em">−iωt</sup> — 신호를 회전에 올리기</div>
+  <div class="slide-sub">원래 신호의 진폭을 회전자에 곱해 복소평면 위에 얹는다</div>
+  <div class="formula-build">
+    <div class="formula-row show">
+      <div class="formula-eq">
+        <span class="part" style="color:var(--gray-200)">F(ω) = ∫ </span><span class="part hi-red">f(t) · e<sup>−iωt</sup></span><span class="part" style="color:var(--gray-200)"> dt</span>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="formula-row show" style="flex-direction:column; gap:16px;">
+      <div class="annot show">
+        <div class="annot-dot dot-red"></div>
+        <div class="annot-text"><strong>f(t)</strong>가 클수록 해당 순간의 점이 원점에서 멀어짐</div>
+      </div>
+      <div class="annot show" style="transition-delay:.1s">
+        <div class="annot-dot dot-red"></div>
+        <div class="annot-text">신호의 <strong>봉우리</strong>는 감기는 방향에 따라 복소평면 위 한 방향에 쏠리거나 퍼짐</div>
+      </div>
+      <div class="annot show" style="transition-delay:.2s">
+        <div class="annot-dot dot-red"></div>
+        <div class="annot-text">ω가 신호 주파수와 <strong>다르면</strong> → 봉우리들이 사방으로 균등하게 퍼짐</div>
+      </div>
+      <div class="annot show" style="transition-delay:.3s">
+        <div class="annot-dot dot-red"></div>
+        <div class="annot-text">ω가 신호 주파수와 <strong>같으면</strong> → 봉우리들이 한 방향으로 정렬</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 슬라이드 5: ∫ dt ── -->
+<div class="slide" id="s5">
+  <div class="slide-label">Step 4 — 세 번째 요소</div>
+  <div class="slide-title">∫ dt — 전 시간에 걸친 평균</div>
+  <div class="slide-sub">감긴 신호의 질량 중심을 계산하는 과정</div>
+  <div class="formula-build">
+    <div class="formula-row show">
+      <div class="formula-eq">
+        <span class="part" style="color:var(--gray-200)">F(ω) = </span><span class="part hi-green">∫</span><span class="part" style="color:var(--gray-200)"> f(t) · e<sup>−iωt</sup> </span><span class="part hi-green">dt</span>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="formula-row show" style="flex-direction:column; gap:16px;">
+      <div class="annot show">
+        <div class="annot-dot dot-green"></div>
+        <div class="annot-text">감긴 와이어 전체의 <strong>질량 중심</strong>(x좌표)을 구하는 과정</div>
+      </div>
+      <div class="annot show" style="transition-delay:.1s">
+        <div class="annot-dot dot-green"></div>
+        <div class="annot-text">봉우리가 <strong>한 방향으로 몰릴수록</strong> 질량 중심이 원점에서 멀어짐</div>
+      </div>
+      <div class="annot show" style="transition-delay:.2s">
+        <div class="annot-dot dot-green"></div>
+        <div class="annot-text">봉우리가 <strong>사방으로 퍼지면</strong> 질량 중심 ≈ 원점 → F(ω) ≈ 0</div>
+      </div>
+      <div class="annot show" style="transition-delay:.3s">
+        <div class="annot-dot dot-green"></div>
+        <div class="annot-text" style="font-style:normal; padding:12px 16px; background:var(--green-soft); border-radius:4px; color:#0f5a2a">
+          적분 = 평균 = 질량 중심 계산. 겁낼 것 없다.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 슬라이드 6: 완성 ── -->
+<div class="slide" id="s6">
+  <div class="slide-label">Step 5 — 종합</div>
+  <div class="slide-title">완성된 공식 — <em>세 요소의 결합</em></div>
+  <div class="slide-sub">각 기호가 하나의 물리적 동작과 1:1로 대응된다</div>
+  <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:32px;">
+    <div class="final-box">
+      <div class="final-eq">
+        F(ω) = <span style="color:#1a4a7a">∫</span> f(t) · <span style="color:#7a1a24">e<sup>−iωt</sup></span> <span style="color:#0f5a2a">dt</span>
+      </div>
+      <table class="final-table">
+        <tr>
+          <td style="color:#9b9890">F(ω)</td>
+          <td>주파수 ω 성분의 강도 — 출력값</td>
+        </tr>
+        <tr>
+          <td style="color:#7a1a24">e<sup>−iωt</sup></td>
+          <td>ω 속도 시계 방향 회전자 — <em>원에 감기</em></td>
+        </tr>
+        <tr>
+          <td style="color:#7a1a24">f(t) · e<sup>−iωt</sup></td>
+          <td>신호를 회전에 올려놓기 — <em>봉우리의 정렬 여부 결정</em></td>
+        </tr>
+        <tr>
+          <td style="color:#0f5a2a">∫ dt</td>
+          <td>전 시간 평균 = 질량 중심 — <em>정렬 세기를 수치화</em></td>
+        </tr>
+      </table>
+    </div>
+    <div style="text-align:center; font-size:17px; color:var(--gray-600); font-style:italic; border-top:1px solid var(--gray-200); padding-top:24px; margin:0 auto; max-width:600px;">
+      F(ω)가 크다 = ω 주파수 성분이 신호 안에 강하게 존재한다
+    </div>
+  </div>
+</div>
+
+<!-- ── 공통 UI ── -->
+<div class="step-bar" id="stepbar"></div>
+<button class="nav-btn" id="navbtn" onclick="next()">다음 →</button>
+
+</div><!-- /deck -->
+
+<script>
+const slides = Array.from(document.querySelectorAll('.slide'));
+const stepbar = document.getElementById('stepbar');
+const navbtn  = document.getElementById('navbtn');
+let cur = 0;
+
+const labels = ['표지','오일러','정의','e⁻ⁱωᵗ','f(t)·e⁻ⁱωᵗ','∫ dt','종합'];
+
+slides.forEach((_,i)=>{
+  const d = document.createElement('div');
+  d.className = 'step-dot' + (i===0?' on':'');
+  d.onclick = ()=>go(i);
+  stepbar.appendChild(d);
+});
+const numEl = document.createElement('span');
+numEl.className = 'step-num';
+numEl.textContent = '01 / 07';
+stepbar.appendChild(numEl);
+
+function go(n){
+  slides[cur].classList.remove('active');
+  document.querySelectorAll('.step-dot')[cur].classList.remove('on');
+  cur = n;
+  slides[cur].classList.add('active');
+  document.querySelectorAll('.step-dot')[cur].classList.add('on');
+  numEl.textContent = String(cur+1).padStart(2,'0') + ' / 0' + slides.length;
+  navbtn.textContent = cur === slides.length-1 ? '처음으로' : '다음 →';
+  triggerAnimations(cur);
+}
+
+function next(){
+  if(cur === slides.length-1) go(0);
+  else go(cur+1);
+}
+
+function triggerAnimations(n){
+  if(n===1){
+    ['eu0','eu1','eu2','eu3','eu4'].forEach((id,i)=>{
+      setTimeout(()=>{
+        const el=document.getElementById(id);
+        if(el) el.classList.add('show');
+      }, i*180);
+    });
+  }
+}
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight'||e.key===' ') next();
+  if(e.key==='ArrowLeft') go(Math.max(0,cur-1));
+});
+
+triggerAnimations(0);
+</script>
+</body>
+</html>
