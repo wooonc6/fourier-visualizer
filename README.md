@@ -7,6 +7,7 @@
 - [① 푸리에 변환 기초 (CFT)](https://wooonc6.github.io/fourier-visualizer/)
 - [② DFT vs FFT · FNO 연결](https://wooonc6.github.io/fourier-visualizer/fft.html)
 - [③ 전체 스토리 — 오일러 공식부터 FNO까지](https://wooonc6.github.io/fourier-visualizer/fourier-story.html)
+- [④ 공식 정리](https://wooonc6.github.io/fourier-visualizer/formula.html)
 
 ---
 
