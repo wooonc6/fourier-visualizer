@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fourier Transform</title>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fafaf8;--black:#0a0a0a;--gray1:#f0efeb;--gray2:#dddbd4;
+  --gray4:#9b9890;--gray6:#5a5854;
+  --blue:#1a4a7a;--blue-l:#dce8f5;--blue-m:#378add;
+  --red:#7a1a24;--red-l:#f5dce0;--red-m:#c84b5a;
+  --green:#0f5a2a;--green-l:#daf0e4;--green-m:#1d9e75;
+  --yellow:#e8e400;--purple:#4a1a7a;--purple-l:#ede8f5;
+}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--black);
+  font-family:'EB Garamond',Georgia,serif;overflow:hidden}
+
+/* ── deck ── */
+.deck{width:100vw;height:100vh;position:relative}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;
+  padding:48px 72px 52px;opacity:0;pointer-events:none;transition:opacity .45s ease}
+.slide.active{opacity:1;pointer-events:all}
+
+/* ── typography ── */
+.s-label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:300;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--gray4);margin-bottom:10px}
+.s-title{font-size:36px;font-weight:400;line-height:1.15;letter-spacing:-.01em;margin-bottom:6px}
+.s-title em{font-style:italic}
+.s-sub{font-size:15px;color:var(--gray6);margin-bottom:36px;font-style:italic}
+.mono{font-family:'JetBrains Mono',monospace;font-weight:300}
+
+/* ── nav ── */
+.stepbar{position:absolute;bottom:18px;left:72px;display:flex;align-items:center;gap:7px}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--gray2);cursor:pointer;transition:background .25s}
+.sdot.on{background:var(--black)}
+.snum{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--gray4);
+  letter-spacing:.1em;margin-left:8px}
+.nav{position:absolute;bottom:12px;right:72px;background:none;
+  border:1px solid var(--gray2);color:var(--black);cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;
+  padding:7px 16px;border-radius:2px;transition:background .2s}
+.nav:hover{background:var(--gray1)}
+
+/* ── animation helpers ── */
+.fade-up{opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
+.fade-up.show{opacity:1;transform:none}
+.fade-in{opacity:0;transition:opacity .5s ease}
+.fade-in.show{opacity:1}
+
+/* ── divider ── */
+.hr{width:40px;height:1px;background:var(--gray2);margin:20px 0}
+
+/* ─────────────────────────────────────────
+   SLIDE 0 — 표지
+───────────────────────────────────────── */
+#s0{justify-content:center}
+#s0 .big{font-size:76px;font-weight:400;letter-spacing:-.02em;line-height:1;
+  animation:fadeUp .8s ease both}
+#s0 .big em{font-style:italic;color:var(--gray4)}
+#s0 .line{width:56px;height:1.5px;background:var(--black);margin:28px 0;
+  animation:fadeUp .8s .15s ease both}
+#s0 .desc{font-size:17px;color:var(--gray6);font-style:italic;max-width:480px;line-height:1.7;
+  animation:fadeUp .8s .25s ease both}
+#s0 .eq{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--gray4);
+  margin-top:44px;letter-spacing:.08em;animation:fadeUp .8s .35s ease both}
+
+/* ─────────────────────────────────────────
+   SLIDE 1 — 오일러 공식
+───────────────────────────────────────── */
+.euler-wrap{display:grid;grid-template-columns:1fr 300px;gap:48px;flex:1;align-items:center}
+.euler-eq{font-size:52px;line-height:1.35}
+.euler-item{display:flex;align-items:baseline;gap:14px;margin-bottom:2px;
+  opacity:0;transform:translateY(8px);transition:opacity .5s ease,transform .5s ease}
+.euler-item.show{opacity:1;transform:none}
+.euler-item .arr{font-size:18px;color:var(--gray4)}
+.euler-item .d{font-size:14px;color:var(--gray6);font-style:italic}
+.euler-item .d strong{font-style:normal;color:var(--black)}
+.unit-circle{width:260px;height:260px;margin:0 auto}
+
+/* ─────────────────────────────────────────
+   SLIDE 2 — 복잡한 파형
+───────────────────────────────────────── */
+.wave-wrap{flex:1;display:flex;flex-direction:column;gap:20px;justify-content:center}
+.wave-canvas-wrap{position:relative}
+.wave-legend{display:flex;gap:20px;margin-top:8px}
+.wleg{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--gray6);font-style:italic}
+.wleg-dot{width:10px;height:10px;border-radius:50%}
+.wave-note{font-size:14px;color:var(--gray6);font-style:italic;
+  border-left:2px solid var(--gray2);padding:10px 16px;max-width:560px}
+
+/* ─────────────────────────────────────────
+   SLIDE 3 — FT 공식 탐구
+───────────────────────────────────────── */
+.ft-build{flex:1;display:flex;flex-direction:column;justify-content:center;gap:0}
+.ft-full-eq{font-size:54px;text-align:center;margin-bottom:8px}
+.ft-full-eq sup{font-size:30px}
+.ft-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px}
+.ft-card{border:1px solid var(--gray2);border-radius:6px;padding:18px 20px;
+  opacity:0;transform:translateY(10px);transition:opacity .5s ease,transform .5s ease}
+.ft-card.show{opacity:1;transform:none}
+.ft-card-sym{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:300;margin-bottom:8px}
+.ft-card-sym.blue{color:var(--blue)}
+.ft-card-sym.red{color:var(--red)}
+.ft-card-sym.green{color:var(--green)}
+.ft-card-title{font-size:14px;font-weight:500;margin-bottom:4px}
+.ft-card-desc{font-size:13px;color:var(--gray6);font-style:italic;line-height:1.5}
+
+/* highlight spans inside ft-full-eq */
+.hl-blue{color:var(--blue)}.hl-red{color:var(--red)}.hl-green{color:var(--green)}
+
+/* ─────────────────────────────────────────
+   SLIDE 4 — 복소평면에 감기
+───────────────────────────────────────── */
+.wrap-layout{display:grid;grid-template-columns:1fr 1fr;gap:48px;flex:1;align-items:center}
+.wrap-ctrl{display:flex;flex-direction:column;gap:18px}
+.ctrl-row{display:flex;align-items:center;gap:12px}
+.ctrl-label{font-size:13px;color:var(--gray6);font-style:italic;min-width:120px}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-size:13px;min-width:52px}
+input[type=range]{width:140px;accent-color:var(--black)}
+.wrap-note{font-size:14px;color:var(--gray6);font-style:italic;line-height:1.6;
+  border-left:2px solid var(--gray2);padding:10px 16px;margin-top:8px}
+.wrap-canvas-wrap{display:flex;flex-direction:column;gap:12px;align-items:center}
+.wrap-canvas-label{font-family:'JetBrains Mono',monospace;font-size:11px;
+  letter-spacing:.1em;color:var(--gray4)}
+
+/* ─────────────────────────────────────────
+   SLIDE 5 — 질량 중심
+───────────────────────────────────────── */
+.cm-layout{display:grid;grid-template-columns:1fr 1fr;gap:48px;flex:1;align-items:start;padding-top:8px}
+.cm-info{display:flex;flex-direction:column;gap:16px}
+.cm-stat{border:1px solid var(--gray2);border-radius:6px;padding:16px 20px}
+.cm-stat-label{font-family:'JetBrains Mono',monospace;font-size:11px;
+  letter-spacing:.1em;color:var(--gray4);margin-bottom:6px}
+.cm-stat-val{font-size:28px;font-weight:400}
+.cm-rule{font-size:14px;color:var(--gray6);font-style:italic;line-height:1.7;
+  border-left:2px solid var(--gray2);padding:10px 16px}
+
+/* ─────────────────────────────────────────
+   SLIDE 6 — 발견의 순간
+───────────────────────────────────────── */
+.moment-layout{display:grid;grid-template-columns:1fr 1fr;gap:48px;flex:1;align-items:center}
+.moment-text{display:flex;flex-direction:column;gap:20px}
+.moment-eq{font-size:28px;line-height:1.5;padding:20px 24px;
+  border:1px solid var(--black);border-radius:6px}
+.moment-eq sup{font-size:16px}
+.moment-point{font-size:15px;color:var(--gray6);font-style:italic;line-height:1.7;
+  border-left:2px solid var(--gray2);padding:10px 16px}
+
+/* ─────────────────────────────────────────
+   SLIDE 7 — 주파수 스파이크
+───────────────────────────────────────── */
+.spike-layout{display:grid;grid-template-columns:1fr 1fr;gap:48px;flex:1;align-items:center}
+.spike-info{display:flex;flex-direction:column;gap:16px}
+.spike-note{font-size:14px;color:var(--gray6);font-style:italic;line-height:1.7}
+
+/* ─────────────────────────────────────────
+   SLIDE 8 — DFT
+───────────────────────────────────────── */
+.dft-layout{display:grid;grid-template-columns:1fr 1fr;gap:48px;flex:1;align-items:start;padding-top:8px}
+.dft-eq-block{padding:20px 24px;background:var(--gray1);border-radius:6px;margin-bottom:16px}
+.dft-eq{font-size:26px;line-height:1.4}
+.dft-eq sup{font-size:16px}
+.dft-compare{display:flex;flex-direction:column;gap:12px}
+.dft-comp-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dft-comp-card{border:1px solid var(--gray2);border-radius:6px;padding:14px 16px}
+.dft-comp-title{font-family:'JetBrains Mono',monospace;font-size:12px;
+  letter-spacing:.08em;margin-bottom:8px}
+.dft-comp-item{font-size:13px;color:var(--gray6);font-style:italic;
+  padding:3px 0;border-top:1px solid var(--gray1)}
+
+/* ─────────────────────────────────────────
+   SLIDE 9 — DFT vs FFT
+───────────────────────────────────────── */
+.fft-layout{display:grid;grid-template-columns:1fr 1fr;gap:40px;flex:1;align-items:start;padding-top:4px}
+.fft-tree-label{font-family:'JetBrains Mono',monospace;font-size:11px;
+  letter-spacing:.1em;color:var(--gray4);margin-bottom:12px}
+.butterfly-box{font-size:12px;color:var(--gray6);font-style:italic;margin-top:8px;line-height:1.6}
+.fft-eq{font-family:'JetBrains Mono',monospace;font-size:14px;
+  background:var(--gray1);border-radius:4px;padding:12px 16px;
+  margin:8px 0;line-height:1.7}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="deck">
+
+<!-- ════════════════ S0 표지 ════════════════ -->
+<div class="slide active" id="s0">
+  <div class="big">Fourier<br><em>Transform</em></div>
+  <div class="line"></div>
+  <div class="desc">복잡한 신호를 단순한 회전의 합으로 분해하는 수학적 도구</div>
+  <div class="eq">F(ω) = ∫ f(t) · e⁻ⁱωᵗ dt</div>
+</div>
+
+<!-- ════════════════ S1 오일러 공식 ════════════════ -->
+<div class="slide" id="s1">
+  <div class="s-label">01 — Euler's Formula</div>
+  <div class="s-title">오일러 공식 — <em>회전의 언어</em></div>
+  <div class="s-sub">The Language of Rotation</div>
+  <div class="euler-wrap">
+    <div>
+      <div class="euler-eq">
+        <div class="euler-item" id="eu0">e<sup>iθ</sup> = cos θ + i·sin θ</div>
+        <div style="height:20px"></div>
+        <div class="euler-item" id="eu1">
+          <span class="arr">→</span>
+          <span class="d">cos θ : <strong>실수축</strong>(x) — 좌우 진동</span>
+        </div>
+        <div class="euler-item" id="eu2">
+          <span class="arr">→</span>
+          <span class="d">i·sin θ : <strong>허수축</strong>(y) — 상하 진동</span>
+        </div>
+        <div class="euler-item" id="eu3">
+          <span class="arr">→</span>
+          <span class="d">e<sup>iθ</sup> : 단위원 위의 점 — <strong>파동 = 회전</strong></span>
+        </div>
+        <div style="height:16px;border-top:1px solid var(--gray2);margin-top:16px"></div>
+        <div class="euler-item" id="eu4" style="margin-top:16px">
+          <span class="arr">→</span>
+          <span class="d">FT에서는 e<sup>−iωt</sup> : ω 속도 <strong>시계 방향</strong> 회전자</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <canvas id="euler-canvas" width="260" height="260" class="unit-circle"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ S2 복잡한 파형 ════════════════ -->
+<div class="slide" id="s2">
+  <div class="s-label">02 — Complex Waveform</div>
+  <div class="s-title">복잡한 파형 — <em>여러 주파수의 합</em></div>
+  <div class="s-sub">Any complex signal is a sum of pure sine waves</div>
+  <div class="wave-wrap">
+    <canvas id="wave-canvas" width="800" height="200" style="width:100%;border-bottom:1px solid var(--gray2)"></canvas>
+    <div class="wave-legend">
+      <div class="wleg"><div class="wleg-dot" style="background:#378add"></div>f₁ = 2 Hz</div>
+      <div class="wleg"><div class="wleg-dot" style="background:#c84b5a"></div>f₂ = 5 Hz</div>
+      <div class="wleg"><div class="wleg-dot" style="background:#1d9e75"></div>f₃ = 9 Hz</div>
+      <div class="wleg"><div class="wleg-dot" style="background:#0a0a0a"></div>합성 신호</div>
+    </div>
+    <div class="wave-note">
+      마이크는 오직 <strong>합성된 파형</strong>만 기록한다.<br>
+      이 신호 안에 어떤 주파수가 얼마나 들어있는지 — 어떻게 알 수 있을까?
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ S3 FT 공식 탐구 ════════════════ -->
+<div class="slide" id="s3">
+  <div class="s-label">03 — Fourier Transform Formula</div>
+  <div class="s-title">FT 공식 탐구 — <em>세 요소의 역할</em></div>
+  <div class="s-sub">Each symbol encodes one physical action</div>
+  <div class="ft-build">
+    <div class="ft-full-eq fade-up" id="ft-eq-full">
+      F(ω) = <span class="hl-blue">∫</span> f(t) · <span class="hl-red">e<sup>−iωt</sup></span> <span class="hl-green">dt</span>
+    </div>
+    <div class="ft-cards">
+      <div class="ft-card" id="ftc0">
+        <div class="ft-card-sym blue mono">e<sup>−iωt</sup></div>
+        <div class="ft-card-title">회전자 — The Rotating Kernel</div>
+        <div class="ft-card-desc">ω 속도로 시계 방향 회전.<br>신호를 복소평면의 원에 감아올리는 동작</div>
+      </div>
+      <div class="ft-card" id="ftc1">
+        <div class="ft-card-sym red mono">f(t)·e<sup>−iωt</sup></div>
+        <div class="ft-card-title">신호를 회전에 올리기 — Winding</div>
+        <div class="ft-card-desc">신호의 진폭을 회전자에 곱해 복소평면에 얹음.<br>봉우리가 정렬되는지 여부가 결정됨</div>
+      </div>
+      <div class="ft-card" id="ftc2">
+        <div class="ft-card-sym green mono">∫ dt</div>
+        <div class="ft-card-title">전 시간에 걸친 평균 — Center of Mass</div>
+        <div class="ft-card-desc">감긴 신호 전체의 질량 중심 계산.<br>봉우리가 몰릴수록 값이 커짐</div>
+      </div>
+    </div>
+    <div style="margin-top:20px;font-size:15px;color:var(--gray6);font-style:italic;
+      border-top:1px solid var(--gray2);padding-top:18px" class="fade-in" id="ft-bottom">
+      ω = 신호 주파수일 때만 적분이 살아남는다 — 나머지는 상쇄되어 0
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ S4 복소평면에 감기 ════════════════ -->
+<div class="slide" id="s4">
+  <div class="s-label">04 — Winding Around the Complex Plane</div>
+  <div class="s-title">복소평면에 감기</div>
+  <div class="s-sub">Winding the signal around a circle</div>
+  <div class="wrap-layout">
+    <div class="wrap-ctrl">
+      <div class="ctrl-row">
+        <span class="ctrl-label" style="color:var(--blue-m)">신호 주파수</span>
+        <input type="range" id="sig-freq" min="1" max="8" step="1" value="3">
+        <span class="ctrl-val" id="sig-freq-val">3 Hz</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label" style="color:var(--red-m)">감기 주파수</span>
+        <input type="range" id="wind-freq" min="0.5" max="8" step="0.5" value="1">
+        <span class="ctrl-val" id="wind-freq-val">1.0 Hz</span>
+      </div>
+      <div class="wrap-note">
+        감기 주파수를 천천히 올려보세요.<br>
+        신호 주파수와 <strong>일치하는 순간</strong> 점들이 한쪽으로 몰립니다.
+      </div>
+      <div id="match-label" style="font-size:14px;font-family:'JetBrains Mono',monospace;
+        padding:10px 14px;border-radius:4px;background:var(--gray1);margin-top:4px">
+        — 불일치
+      </div>
+    </div>
+    <div class="wrap-canvas-wrap">
+      <div class="wrap-canvas-label">복소평면 (원에 감긴 신호)</div>
+      <canvas id="wrap-canvas" width="300" height="300"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ S5 질량 중심 ════════════════ -->
+<div class="slide" id="s5">
+  <div class="s-label">05 — Center of Mass</div>
+  <div class="s-title">질량 중심 — <em>얼마나 치우쳤는가</em></div>
+  <div class="s-sub">How far is the center of mass from the origin?</div>
+  <div class="cm-layout">
+    <div class="cm-info">
+      <div class="cm-stat">
+        <div class="cm-stat-label">질량 중심 x좌표</div>
+        <div class="cm-stat-val" id="cm-val">0.000</div>
+      </div>
+      <div class="cm-stat">
+        <div class="cm-stat-label">신호 주파수</div>
+        <div class="cm-stat-val" id="cm-sig">3 Hz</div>
+      </div>
+      <div class="cm-stat">
+        <div class="cm-stat-label">감기 주파수</div>
+        <div class="cm-stat-val" id="cm-wind">1.0 Hz</div>
+      </div>
+      <div class="cm-rule">
+        질량 중심이 원점에서 <strong>멀수록</strong> → |F(ω)| 큼<br>
+        해당 주파수 성분이 신호 안에 <strong>강하게 존재</strong>
+      </div>
+      <div class="ctrl-row" style="margin-top:4px">
+        <span class="ctrl-label" style="color:var(--red-m)">감기 주파수</span>
+        <input type="range" id="cm-wind-slider" min="0.5" max="8" step="0.5" value="1">
+        <span class="ctrl-val" id="cm-wind-val">1.0 Hz</span>
+      </div>
+    </div>
+    <canvas id="cm-canvas" width="300" height="300"></canvas>
+  </div>
+</div>
+
+<!-- ════════════════ S6 발견의 순간 ════════════════ -->
+<div class="slide" id="s6">
+  <div class="s-label">06 — The Moment of Discovery</div>
+  <div class="s-title">발견의 순간 — <em>정확한 주파수에서 정렬이 일어난다</em></div>
+  <div class="s-sub">Alignment happens only at the signal's frequency</div>
+  <div class="moment-layout">
+    <div class="moment-text">
+      <div class="moment-eq fade-up" id="m-eq">
+        F(ω₀) 최대<br>
+        <span style="font-size:20px;color:var(--gray4)">⟺</span><br>
+        ω₀ 가 신호 안에 존재
+      </div>
+      <div class="moment-point fade-up" id="m-p1" style="transition-delay:.15s">
+        ω = ω₀ 일 때 → e<sup>i(ω₀−ω)t</sup> = e<sup>0</sup> = 1<br>
+        → 상수항이 되어 적분이 <strong>발산 (스파이크)</strong><br>
+        <span style="font-size:13px">→ 유한 구간 T에서는 T에 비례하는 큰 값</span>
+      </div>
+      <div class="moment-point fade-up" id="m-p2" style="transition-delay:.3s">
+        ω ≠ ω₀ 일 때 → e<sup>i(ω₀−ω)t</sup> 는 빠르게 진동<br>
+        → 충분히 긴 시간 적분 시 <strong>0으로 상쇄</strong>
+      </div>
+    </div>
+    <canvas id="moment-canvas" width="300" height="300"></canvas>
+  </div>
+</div>
+
+<!-- ════════════════ S7 주파수 스파이크 ════════════════ -->
+<div class="slide" id="s7">
+  <div class="s-label">07 — Frequency Spectrum</div>
+  <div class="s-title">주파수 스파이크 — <em>스펙트럼의 완성</em></div>
+  <div class="s-sub">Recording the center of mass across all frequencies</div>
+  <div class="spike-layout">
+    <div class="spike-info">
+      <div class="spike-note fade-up" id="sp1">
+        감기 주파수를 0 → 높은 값까지 훑으며<br>
+        매 순간의 <strong>질량 중심 크기</strong>를 기록하면
+      </div>
+      <div class="spike-note fade-up" id="sp2" style="transition-delay:.15s;margin-top:8px">
+        → f₁ = 2 Hz, f₂ = 5 Hz, f₃ = 9 Hz 위치에서만<br>
+        그래프가 <strong>뾰족하게 솟아오른다</strong>
+      </div>
+      <div style="margin-top:20px;padding:16px 20px;border:1px solid var(--black);
+        border-radius:6px;font-size:15px;line-height:1.6" class="fade-in" id="sp3">
+        이것이 <strong>주파수 스펙트럼</strong>이다.<br>
+        복잡하게 뒤섞인 신호에서<br>
+        원래 성분을 분리해낸 것.
+      </div>
+    </div>
+    <canvas id="spike-canvas" width="360" height="300"></canvas>
+  </div>
+</div>
+
+<!-- ════════════════ S8 DFT ════════════════ -->
+<div class="slide" id="s8">
+  <div class="s-label">08 — Discrete Fourier Transform</div>
+  <div class="s-title">DFT — <em>이산화</em></div>
+  <div class="s-sub">∫ → Σ : from continuous to discrete</div>
+  <div class="dft-layout">
+    <div>
+      <div class="dft-eq-block">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;
+          color:var(--gray4);letter-spacing:.1em;margin-bottom:8px">CONTINUOUS — FT</div>
+        <div class="dft-eq">F(ω) = ∫ f(t)·e<sup>−iωt</sup> dt</div>
+      </div>
+      <div style="text-align:center;font-size:24px;color:var(--gray4);margin:4px 0">↓</div>
+      <div class="dft-eq-block" style="border:1px solid var(--black)">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;
+          color:var(--gray4);letter-spacing:.1em;margin-bottom:8px">DISCRETE — DFT</div>
+        <div class="dft-eq">X[k] = Σ x[n]·e<sup>−i2πkn/N</sup></div>
+        <div style="font-size:13px;color:var(--gray6);margin-top:8px;font-style:italic">
+          n = 0, 1, …, N−1 &nbsp;|&nbsp; k = 0, 1, …, N−1
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--gray6);font-style:italic;
+        border-left:2px solid var(--gray2);padding:8px 14px;margin-top:12px;line-height:1.6">
+        계산량 : 출력 N개 × 입력 N개 참조 → <strong>O(N²)</strong>
+      </div>
+    </div>
+    <div class="dft-compare">
+      <div class="dft-comp-row">
+        <div class="dft-comp-card">
+          <div class="dft-comp-title" style="color:var(--blue)">FT</div>
+          <div class="dft-comp-item">연속 함수 대상</div>
+          <div class="dft-comp-item">∫ 적분 사용</div>
+          <div class="dft-comp-item">무한한 주파수</div>
+        </div>
+        <div class="dft-comp-card" style="border-color:var(--black)">
+          <div class="dft-comp-title" style="color:var(--black)">DFT</div>
+          <div class="dft-comp-item">이산 샘플 N개</div>
+          <div class="dft-comp-item">Σ 합산 사용</div>
+          <div class="dft-comp-item">k = 0…N−1 빈</div>
+        </div>
+      </div>
+      <canvas id="dft-sample-canvas" width="320" height="160" style="width:100%"></canvas>
+      <div style="font-size:12px;color:var(--gray4);font-style:italic;font-family:'JetBrains Mono',monospace">
+        연속 신호 → 이산 샘플 N개로 근사
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ S9 FFT ════════════════ -->
+<div class="slide" id="s9">
+  <div class="s-label">09 — Fast Fourier Transform</div>
+  <div class="s-title">DFT vs FFT — <em>O(N²) → O(N log N)</em></div>
+  <div class="s-sub">Divide and conquer using symmetry of roots of unity</div>
+  <div class="fft-layout">
+    <div>
+      <div class="fft-tree-label">BUTTERFLY DIAGRAM — N = 8</div>
+      <canvas id="fft-tree-canvas" width="340" height="260" style="width:100%"></canvas>
+      <div class="fft-eq">
+X[k]     = E[k] + W<sup>k</sup>·O[k]
+X[k+N/2] = E[k] − W<sup>k</sup>·O[k]
+      </div>
+      <div class="butterfly-box">
+        W<sup>k+N/2</sup> = −W<sup>k</sup> 대칭성으로<br>
+        절반만 계산 → 나머지는 부호 반전으로 재사용
+      </div>
+    </div>
+    <div>
+      <div class="fft-tree-label">연산량 비교 — N별</div>
+      <canvas id="fft-compare-canvas" width="340" height="220" style="width:100%"></canvas>
+      <div style="display:flex;gap:16px;margin-top:10px">
+        <div class="wleg"><div class="wleg-dot" style="background:#c84b5a"></div>DFT O(N²)</div>
+        <div class="wleg"><div class="wleg-dot" style="background:#1d9e75"></div>FFT O(N log N)</div>
+      </div>
+      <div style="margin-top:16px;font-size:14px;color:var(--gray6);font-style:italic;line-height:1.7;
+        border-left:2px solid var(--gray2);padding:10px 16px">
+        N = 1024 기준<br>
+        DFT : 1,048,576 회 연산<br>
+        FFT : 10,240 회 연산<br>
+        → <strong>약 100배 차이</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ 공통 UI ════════ -->
+<div class="stepbar" id="stepbar"></div>
+<button class="nav" id="navbtn" onclick="next()">다음 →</button>
+
+</div><!-- /deck -->
+<script>
+/* ─── 슬라이드 관리 ─── */
+const slides=Array.from(document.querySelectorAll('.slide'));
+const N=slides.length;
+let cur=0;
+const stepbar=document.getElementById('stepbar');
+const navbtn=document.getElementById('navbtn');
+slides.forEach((_,i)=>{
+  const d=document.createElement('div');
+  d.className='sdot'+(i===0?' on':'');
+  d.onclick=()=>go(i);
+  stepbar.appendChild(d);
+});
+const snum=document.createElement('span');
+snum.className='snum';
+snum.textContent='01 / 10';
+stepbar.appendChild(snum);
+function go(n){
+  slides[cur].classList.remove('active');
+  document.querySelectorAll('.sdot')[cur].classList.remove('on');
+  cur=n;
+  slides[cur].classList.add('active');
+  document.querySelectorAll('.sdot')[cur].classList.add('on');
+  snum.textContent=String(cur+1).padStart(2,'0')+' / '+String(N).padStart(2,'0');
+  navbtn.textContent=cur===N-1?'처음으로 ↺':'다음 →';
+  onSlideEnter(cur);
+}
+function next(){cur===N-1?go(0):go(cur+1)}
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' ')next();
+  if(e.key==='ArrowLeft')go(Math.max(0,cur-1));
+});
+
+/* ─── 유틸 ─── */
+function showEl(id,delay=0){
+  setTimeout(()=>{const el=document.getElementById(id);if(el){el.classList.add('show')}},delay);
+}
+function clr(ctx,w,h){ctx.clearRect(0,0,w,h)}
+
+/* ═══════════════════════════════════
+   S1 — 오일러 공식 단위원 애니메이션
+═══════════════════════════════════ */
+const euCanvas=document.getElementById('euler-canvas');
+const euCtx=euCanvas.getContext('2d');
+let euAngle=0,euRaf=null;
+function drawEuler(){
+  clr(euCtx,260,260);
+  const cx=130,cy=130,r=100;
+  euCtx.strokeStyle='#dddbd4';euCtx.lineWidth=1;
+  euCtx.beginPath();euCtx.arc(cx,cy,r,0,Math.PI*2);euCtx.stroke();
+  euCtx.beginPath();euCtx.moveTo(cx-r-12,cy);euCtx.lineTo(cx+r+12,cy);euCtx.stroke();
+  euCtx.beginPath();euCtx.moveTo(cx,cy-r-12);euCtx.lineTo(cx,cy+r+12);euCtx.stroke();
+  const px=cx+r*Math.cos(euAngle),py=cy-r*Math.sin(euAngle);
+  euCtx.strokeStyle='#0a0a0a';euCtx.lineWidth=1.5;
+  euCtx.beginPath();euCtx.moveTo(cx,cy);euCtx.lineTo(px,py);euCtx.stroke();
+  euCtx.strokeStyle='#378add';euCtx.lineWidth=1;euCtx.setLineDash([4,3]);
+  euCtx.beginPath();euCtx.moveTo(px,py);euCtx.lineTo(px,cy);euCtx.stroke();
+  euCtx.strokeStyle='#c84b5a';
+  euCtx.beginPath();euCtx.moveTo(cx,cy);euCtx.lineTo(px,cy);euCtx.stroke();
+  euCtx.setLineDash([]);
+  euCtx.fillStyle='#0a0a0a';euCtx.beginPath();euCtx.arc(px,py,5,0,Math.PI*2);euCtx.fill();
+  euCtx.font='13px EB Garamond';euCtx.fillStyle='#378add';
+  euCtx.fillText('sin θ',px+8,py+(py<cy?-4:16));
+  euCtx.fillStyle='#c84b5a';euCtx.fillText('cos θ',(cx+px)/2-16,cy+16);
+  euCtx.fillStyle='#9b9890';euCtx.font='11px JetBrains Mono';
+  euCtx.fillText('Re',cx+r+14,cy+4);euCtx.fillText('Im',cx+4,cy-r-14);
+  euAngle+=0.012;
+  euRaf=requestAnimationFrame(drawEuler);
+}
+
+/* ═══════════════════════════════════
+   S2 — 복잡한 파형
+═══════════════════════════════════ */
+function drawWave(){
+  const cv=document.getElementById('wave-canvas');
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  clr(ctx,W,H);
+  ctx.strokeStyle='#dddbd4';ctx.lineWidth=.5;
+  ctx.beginPath();ctx.moveTo(0,H/2);ctx.lineTo(W,H/2);ctx.stroke();
+  const freqs=[2,5,9];
+  const amps=[0.35,0.22,0.13];
+  const cols=['#378add','#c84b5a','#1d9e75'];
+  const T=2;
+  freqs.forEach((f,i)=>{
+    ctx.strokeStyle=cols[i];ctx.lineWidth=1.5;ctx.globalAlpha=.7;
+    ctx.beginPath();
+    for(let x=0;x<=W;x++){
+      const t=(x/W)*T;
+      const y=H/2-amps[i]*H*Math.sin(2*Math.PI*f*t);
+      x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }ctx.stroke();
+  });
+  ctx.strokeStyle='#0a0a0a';ctx.lineWidth=2.5;ctx.globalAlpha=1;
+  ctx.beginPath();
+  for(let x=0;x<=W;x++){
+    const t=(x/W)*T;
+    let y=H/2;
+    freqs.forEach((f,i)=>{y-=amps[i]*H*Math.sin(2*Math.PI*f*t);});
+    x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }ctx.stroke();
+}
+
+/* ═══════════════════════════════════
+   공통 — 원에 감기 헬퍼
+═══════════════════════════════════ */
+function computeWinding(sigFreq,windFreq){
+  const pts=[],N=300,T=3;
+  for(let i=0;i<N;i++){
+    const t=(i/N)*T;
+    const sig=Math.sin(2*Math.PI*sigFreq*t);
+    const re=sig*Math.cos(2*Math.PI*windFreq*t);
+    const im=-sig*Math.sin(2*Math.PI*windFreq*t);
+    pts.push([re,im]);
+  }
+  const cx=pts.reduce((s,p)=>s+p[0],0)/N;
+  const cy=pts.reduce((s,p)=>s+p[1],0)/N;
+  return{pts,cx,cy};
+}
+function drawWinding(canvas,sigFreq,windFreq){
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  const cx=W/2,cy=H/2,sc=Math.min(W,H)*0.38;
+  clr(ctx,W,H);
+  ctx.strokeStyle='#dddbd4';ctx.lineWidth=.5;
+  ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,0);ctx.lineTo(cx,H);ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,sc,0,Math.PI*2);ctx.stroke();
+  const{pts,cx:mcx,cy:mcy}=computeWinding(sigFreq,windFreq);
+  ctx.strokeStyle='#378add';ctx.lineWidth=1.5;ctx.globalAlpha=.8;
+  ctx.beginPath();
+  pts.forEach(([x,y],i)=>{
+    const px=cx+x*sc,py=cy+y*sc;
+    i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+  });ctx.stroke();ctx.globalAlpha=1;
+  ctx.fillStyle='#c84b5a';
+  ctx.beginPath();ctx.arc(cx+mcx*sc,cy+mcy*sc,7,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#0a0a0a';ctx.font='12px JetBrains Mono';
+  ctx.fillText('질량 중심',cx+mcx*sc+10,cy+mcy*sc+4);
+  return{mcx,mcy};
+}
+
+/* ═══════════════════════════════════
+   S4 — 감기 슬라이더
+═══════════════════════════════════ */
+const wCanvas=document.getElementById('wrap-canvas');
+function updateWrap(){
+  const sf=parseInt(document.getElementById('sig-freq').value);
+  const wf=parseFloat(document.getElementById('wind-freq').value);
+  document.getElementById('sig-freq-val').textContent=sf+' Hz';
+  document.getElementById('wind-freq-val').textContent=wf.toFixed(1)+' Hz';
+  drawWinding(wCanvas,sf,wf);
+  const match=Math.abs(sf-wf)<0.3;
+  const ml=document.getElementById('match-label');
+  if(match){ml.textContent='✓ 주파수 일치 — 봉우리 정렬!';ml.style.background='#daf0e4';ml.style.color='#0f5a2a';}
+  else{ml.textContent='— 불일치';ml.style.background='var(--gray1)';ml.style.color='var(--gray6)';}
+}
+document.getElementById('sig-freq').oninput=updateWrap;
+document.getElementById('wind-freq').oninput=updateWrap;
+
+/* ═══════════════════════════════════
+   S5 — 질량 중심 슬라이더
+═══════════════════════════════════ */
+const cmCanvas=document.getElementById('cm-canvas');
+function updateCM(){
+  const sf=3;
+  const wf=parseFloat(document.getElementById('cm-wind-slider').value);
+  document.getElementById('cm-wind-val').textContent=wf.toFixed(1)+' Hz';
+  document.getElementById('cm-wind').textContent=wf.toFixed(1)+' Hz';
+  const{mcx}=drawWinding(cmCanvas,sf,wf);
+  document.getElementById('cm-val').textContent=mcx.toFixed(3);
+  document.getElementById('cm-sig').textContent=sf+' Hz';
+}
+document.getElementById('cm-wind-slider').oninput=updateCM;
+
+/* ═══════════════════════════════════
+   S6 — 발견의 순간 canvas (고정 3Hz)
+═══════════════════════════════════ */
+function drawMoment(){
+  const cv=document.getElementById('moment-canvas');
+  drawWinding(cv,3,3);
+}
+
+/* ═══════════════════════════════════
+   S7 — 주파수 스파이크
+═══════════════════════════════════ */
+function drawSpike(){
+  const cv=document.getElementById('spike-canvas');
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  clr(ctx,W,H);
+  const pad={l:40,r:16,t:16,b:40};
+  const gw=W-pad.l-pad.r,gh=H-pad.t-pad.b;
+  ctx.strokeStyle='#dddbd4';ctx.lineWidth=.5;
+  ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+gh);
+  ctx.lineTo(pad.l+gw,pad.t+gh);ctx.stroke();
+  ctx.fillStyle='#9b9890';ctx.font='10px JetBrains Mono';
+  ctx.fillText('|F(ω)|',pad.l-36,pad.t+8);
+  ctx.fillText('ω (Hz)',pad.l+gw-24,pad.t+gh+28);
+  const maxHz=12;
+  const sigFreqs=[2,5,9];
+  const amps=[0.8,0.6,0.35];
+  function fval(w){
+    let v=0;
+    sigFreqs.forEach((f,i)=>{
+      const d=Math.abs(w-f);
+      v+=amps[i]*Math.exp(-d*d*4);
+    });return v;
+  }
+  ctx.strokeStyle='#0a0a0a';ctx.lineWidth=1.5;
+  ctx.beginPath();
+  for(let xi=0;xi<=gw;xi++){
+    const w=(xi/gw)*maxHz;
+    const v=fval(w);
+    const px=pad.l+xi,py=pad.t+gh-v*gh*0.92;
+    xi===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+  }ctx.stroke();
+  sigFreqs.forEach((f,i)=>{
+    const px=pad.l+(f/maxHz)*gw;
+    ctx.strokeStyle='#c84b5a';ctx.setLineDash([3,3]);ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(px,pad.t+gh);ctx.lineTo(px,pad.t+gh-amps[i]*gh*0.92-4);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#c84b5a';ctx.font='12px EB Garamond';
+    ctx.fillText('f₁f₂f₃'.split('')[i],px-4,pad.t+gh+20);
+  });
+  for(let f=0;f<=maxHz;f+=2){
+    const px=pad.l+(f/maxHz)*gw;
+    ctx.fillStyle='#9b9890';ctx.font='10px JetBrains Mono';
+    ctx.fillText(f,px-4,pad.t+gh+14);
+  }
+}
+
+/* ═══════════════════════════════════
+   S8 — DFT 샘플 시각화
+═══════════════════════════════════ */
+function drawDFTSample(){
+  const cv=document.getElementById('dft-sample-canvas');
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  clr(ctx,W,H);
+  const pad={l:12,r:12,t:16,b:12};
+  const gw=W-pad.l-pad.r,gh=H-pad.t-pad.b;
+  ctx.strokeStyle='#dddbd4';ctx.lineWidth=1;
+  ctx.beginPath();
+  for(let x=0;x<=gw;x++){
+    const t=(x/gw)*2;
+    const y=pad.t+gh/2-Math.sin(2*Math.PI*2*t)*gh*0.35-Math.sin(2*Math.PI*5*t)*gh*0.22;
+    x===0?ctx.moveTo(pad.l+x,y):ctx.lineTo(pad.l+x,y);
+  }ctx.stroke();
+  const Ns=24;
+  for(let i=0;i<Ns;i++){
+    const t=(i/(Ns-1))*2;
+    const sig=Math.sin(2*Math.PI*2*t)*0.35+Math.sin(2*Math.PI*5*t)*0.22;
+    const px=pad.l+(i/(Ns-1))*gw;
+    const py=pad.t+gh/2-sig*gh;
+    ctx.strokeStyle='#0a0a0a';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(px,pad.t+gh/2);ctx.lineTo(px,py);ctx.stroke();
+    ctx.fillStyle='#0a0a0a';ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fill();
+  }
+}
+
+/* ═══════════════════════════════════
+   S9 — FFT 나비 다이어그램
+═══════════════════════════════════ */
+function drawFFTTree(){
+  const cv=document.getElementById('fft-tree-canvas');
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  clr(ctx,W,H);
+  const n=8;
+  const cols=4;
+  const cw=W/cols,rh=H/(n+1);
+  function nodeX(col){return cw*col+cw/2}
+  function nodeY(row){return rh*(row+1)}
+  const bitrev=[0,4,2,6,1,5,3,7];
+  ctx.font='11px JetBrains Mono';
+  ctx.textAlign='center';
+  for(let r=0;r<n;r++){
+    ctx.fillStyle='#9b9890';
+    ctx.fillText('x['+bitrev[r]+']',nodeX(0)-20,nodeY(r)+4);
+  }
+  function drawStage(stage){
+    const step=Math.pow(2,stage+1);
+    const half=step/2;
+    for(let k=0;k<n;k+=step){
+      for(let j=0;j<half;j++){
+        const r1=k+j,r2=k+j+half;
+        const x1=nodeX(stage),y1=nodeY(r1);
+        const x2=nodeX(stage+1),y2=nodeY(r1);
+        const x3=nodeX(stage),y3=nodeY(r2);
+        const x4=nodeX(stage+1),y4=nodeY(r2);
+        ctx.strokeStyle='#0a0a0a';ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x4,y4);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(x3,y3);ctx.lineTo(x4,y4);ctx.stroke();
+        ctx.strokeStyle='#c84b5a';ctx.lineWidth=1;ctx.setLineDash([2,2]);
+        ctx.beginPath();ctx.moveTo(x3,y3);ctx.lineTo(x2,y2);ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+  }
+  for(let s=0;s<cols-1;s++)drawStage(s);
+  for(let r=0;r<n;r++){
+    ctx.fillStyle='#0a0a0a';
+    ctx.fillText('X['+r+']',nodeX(3)+24,nodeY(r)+4);
+  }
+  const stageLabels=['Stage 1','Stage 2','Stage 3'];
+  stageLabels.forEach((l,i)=>{
+    ctx.fillStyle='#9b9890';ctx.font='9px JetBrains Mono';
+    ctx.fillText(l,nodeX(i+1),12);
+  });
+  ctx.textAlign='left';
+}
+
+/* ═══════════════════════════════════
+   S9 — FFT 비교 그래프
+═══════════════════════════════════ */
+function drawFFTCompare(){
+  const cv=document.getElementById('fft-compare-canvas');
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  clr(ctx,W,H);
+  const pad={l:52,r:16,t:16,b:36};
+  const gw=W-pad.l-pad.r,gh=H-pad.t-pad.b;
+  ctx.strokeStyle='#dddbd4';ctx.lineWidth=.5;
+  ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+gh);ctx.lineTo(pad.l+gw,pad.t+gh);ctx.stroke();
+  const Ns=[8,16,32,64,128,256,512,1024];
+  const vals_dft=Ns.map(n=>n*n);
+  const vals_fft=Ns.map(n=>n*Math.log2(n));
+  const allVals=[...vals_dft,...vals_fft].filter(v=>v>0);
+  const logMin=Math.log10(Math.min(...allVals));
+  const logMax=Math.log10(Math.max(...allVals));
+  function toX(n){return pad.l+(Math.log2(n)-Math.log2(Ns[0]))/(Math.log2(Ns[Ns.length-1])-Math.log2(Ns[0]))*gw}
+  function toY(v){return pad.t+gh-(Math.log10(v)-logMin)/(logMax-logMin)*gh}
+  ctx.strokeStyle='#dddbd4';ctx.lineWidth=.5;ctx.setLineDash([2,2]);
+  [1e1,1e2,1e3,1e4,1e5,1e6].forEach(v=>{
+    if(v<Math.pow(10,logMin)||v>Math.pow(10,logMax))return;
+    const y=toY(v);
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+gw,y);ctx.stroke();
+    ctx.fillStyle='#9b9890';ctx.font='9px JetBrains Mono';ctx.textAlign='right';
+    ctx.fillText('10^'+Math.round(Math.log10(v)),pad.l-4,y+3);
+  });
+  ctx.setLineDash([]);
+  ctx.strokeStyle='#c84b5a';ctx.lineWidth=2;
+  ctx.beginPath();
+  Ns.forEach((n,i)=>{const v=n*n;i===0?ctx.moveTo(toX(n),toY(v)):ctx.lineTo(toX(n),toY(v));});
+  ctx.stroke();
+  ctx.strokeStyle='#1d9e75';ctx.lineWidth=2;
+  ctx.beginPath();
+  Ns.forEach((n,i)=>{const v=n*Math.log2(n);i===0?ctx.moveTo(toX(n),toY(v)):ctx.lineTo(toX(n),toY(v));});
+  ctx.stroke();
+  ctx.fillStyle='#9b9890';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+  Ns.filter((_,i)=>i%2===0).forEach(n=>{ctx.fillText(n,toX(n),pad.t+gh+18);});
+  ctx.textAlign='left';ctx.fillText('N (log scale)',pad.l+gw-50,pad.t+gh+28);
+  ctx.save();ctx.translate(pad.l-46,pad.t+gh/2);ctx.rotate(-Math.PI/2);
+  ctx.textAlign='center';ctx.fillText('연산 횟수 (log)',0,0);ctx.restore();
+}
+
+/* ─── 슬라이드 진입 콜백 ─── */
+function onSlideEnter(n){
+  if(n===1){
+    cancelAnimationFrame(euRaf);
+    euAngle=Math.PI/5;
+    ['eu0','eu1','eu2','eu3','eu4'].forEach((id,i)=>setTimeout(()=>showEl(id),i*200));
+    drawEuler();
+  } else {
+    cancelAnimationFrame(euRaf);
+  }
+  if(n===2) drawWave();
+  if(n===3){
+    showEl('ft-eq-full');
+    ['ftc0','ftc1','ftc2'].forEach((id,i)=>setTimeout(()=>showEl(id),(i+1)*200));
+    setTimeout(()=>showEl('ft-bottom'),800);
+  }
+  if(n===4) updateWrap();
+  if(n===5) updateCM();
+  if(n===6){
+    drawMoment();
+    ['m-eq','m-p1','m-p2'].forEach((id,i)=>setTimeout(()=>showEl(id),i*220));
+  }
+  if(n===7){
+    drawSpike();
+    ['sp1','sp2'].forEach((id,i)=>setTimeout(()=>showEl(id),i*200));
+    setTimeout(()=>showEl('sp3'),600);
+  }
+  if(n===8){drawDFTSample();}
+  if(n===9){drawFFTTree();drawFFTCompare();}
+}
+
+onSlideEnter(0);
+</script>
+</body>
+</html>
